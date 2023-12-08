@@ -28,3 +28,9 @@
 [user]
   email = thomas@mfrwdesign.com
   name = Thomas Sample
+[pull]
+	ff = only
+[rebase]
+	autosquash = true
+[init]
+	defaultBranch = main
