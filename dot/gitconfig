@@ -1,36 +1,50 @@
+[core]
+	autocrlf = input
+	editor = cursor --wait
+	excludesfile = ~/.gitignore
 [alias]
+	branch-name = rev-parse --abbrev-ref HEAD
+	pub = !git push -u origin $(git branch-name)
+	password = !reset-github-password
+	redo = commit --amend --no-edit
 	co = checkout
-  branch-name = rev-parse --abbrev-ref HEAD
 	gp = git push
 	gc = git commit -m
 	ga = git add
 	gst = git status
-  pub = !git push -u origin $(git branch-name)
-  password = !reset-github-password
-[credential]
-	helper = osxkeychain
+[push]
+	default = simple
+[user]
+	email = thomas@mfrwdesign.com
+	name = Thomas Sample
 [color]
 	ui = true
-[core]
-  autocrlf = input
-  editor = atom --wait
-  excludesfile = ~/.gitignore
+[credential]
+	helper = osxkeychain
 [filter "lfs"]
 	clean = git lfs clean %f
 	smudge = git lfs smudge %f
 	required = true
 [github]
 	user = mfrwdesign
-[push]
-	default = simple
-[rerere]
-	enabled = true
-[user]
-  email = thomas@mfrwdesign.com
-  name = Thomas Sample
+[commit]
+	gpgsign = false
 [pull]
-	ff = only
-[rebase]
-	autosquash = true
+	rebase = false
 [init]
 	defaultBranch = main
+[merge]
+  ff = no
+[pull]
+  ff = only
+[rerere]
+	enabled = true
+[rebase]
+	autosquash = true
+[safe]
+	directory = /opt/homebrew
+	directory = /opt/homebrew/Library/Taps/homebrew/homebrew-aliases
+	directory = /opt/homebrew/Library/Taps/homebrew/homebrew-autoupdate
+	directory = /opt/homebrew/Library/Taps/homebrew/homebrew-bundle
+	directory = /opt/homebrew/Library/Taps/homebrew/homebrew-cask
+	directory = /opt/homebrew/Library/Taps/homebrew/homebrew-core
