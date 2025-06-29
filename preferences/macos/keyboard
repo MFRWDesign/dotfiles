@@ -1,5 +1,6 @@
 #!/bin/zsh
 
+# MFRWDesign: Keeping default keyboard behavior (not disabling Caps Lock)
 # AIR=634
 # PRO=632
 # ERGO=591

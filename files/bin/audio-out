@@ -1,0 +1,14 @@
+#!/bin/zsh
+
+if [ $1 = 'speakers' ]; then
+  SwitchAudioSource -s "Desk"
+elif [ $1 = 'headphones' ]; then
+  SwitchAudioSource -s "External Headphones"
+elif [ $1 = 'airpods' ]; then
+  SwitchAudioSource -s "jdb-airpods"
+else
+  echo 'Usage:'
+  echo '  audio-out'
+  echo '  audio-out speakers'
+  echo '  audio-out headphones'
+fi

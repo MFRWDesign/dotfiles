@@ -4,7 +4,7 @@ set -e
 # Set lock screen message
 sudo defaults write /Library/Preferences/com.apple.loginwindow \
   LoginwindowText \
-  "Found this computer? Please contact Thomas Sample at thomas@karmacreative.io."
+  "Found this computer? Please contact Thomas Sample at thomas@mfrwdesign.com."
 
 # Check for software updates daily
 defaults write com.apple.SoftwareUpdate ScheduleFrequency -int 1
@@ -28,5 +28,14 @@ sudo defaults write com.apple.universalaccess closeViewScrollWheelToggle -bool t
 sudo defaults write com.apple.universalaccess HIDScrollZoomModifierMask -int 262144
 # Follow the keyboard focus while zoomed in
 sudo defaults write com.apple.universalaccess closeViewZoomFollowsFocus -bool true
+
+# Disable user interface sound effects
+defaults write com.apple.systemsound "com.apple.sound.uiaudio.enabled" -int 0
+
+# Disable click wallpaper to reveal desktop
+defaults write com.apple.WindowManager EnableStandardClickToShowDesktop -bool false
+
+# Hide all icons on the Desktop
+defaults write com.apple.finder "CreateDesktop" -bool "false"
 
 echo 'Configured Core preferences'

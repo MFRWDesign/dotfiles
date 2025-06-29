@@ -26,7 +26,7 @@
 	smudge = git lfs smudge %f
 	required = true
 [github]
-	user = mfrwdesign
+	user = MFRWDesign
 [commit]
 	gpgsign = false
 [pull]

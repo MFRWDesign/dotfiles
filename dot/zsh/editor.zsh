@@ -1,1 +1,1 @@
-export EDITOR="atom -w"
+export EDITOR="cursor"

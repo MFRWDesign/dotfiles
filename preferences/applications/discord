@@ -1,0 +1,4 @@
+# Hide Discord.app from Dock and Application Switcher
+
+# Disabled due to SIP
+# /usr/libexec/PlistBuddy -c 'Add :LSUIElement bool true' /Applications/Discord.app/Contents/Info.plist

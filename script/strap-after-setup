@@ -1,4 +1,15 @@
-#!/bin/bash
+#!/bin/zsh
 set -e
 
-# After brew installed goes here!
+# Accept the Xcode license
+sudo xcodebuild -license accept
+
+# Ensure preferred language versions are installed
+rbenv install -s $(cat ~/.rbenv/version)
+brew rbenv-sync
+
+pyenv install -s $(cat ~/.pyenv/version)
+brew pyenv-sync
+
+nodenv install -s $(cat ~/.nodenv/version)
+brew nodenv-sync

@@ -1,0 +1,4 @@
+# Hide Slack.app from Dock and Application Switcher
+
+# Disabled due to SIP
+# /usr/libexec/PlistBuddy -c 'Add :LSUIElement bool true' /Applications/Slack.app/Contents/Info.plist

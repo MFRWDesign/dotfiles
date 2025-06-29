@@ -1,0 +1,26 @@
+#!/bin/zsh
+
+declare -a apps=(
+  "1Password"
+  "Amphetamine"
+  "Bartender 5"
+  "Bear"
+  "BeardedSpice"
+  "Choosy"
+  "ExpressVPN"
+  "Gitify"
+  "Hammerspoon"
+  "Home Assistant"
+  "Itsycal"
+  "Lunar"
+  "Raycast"
+  "Shifty"
+  "SoundSource"
+  "Tailscale"
+  "Yoink"
+)
+
+for app in $apps; do
+  echo 'Adding login item for '$app'.app'
+  osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/'$app'.app", hidden:true}' > /dev/null 2>&1
+done

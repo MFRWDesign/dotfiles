@@ -1,21 +1,24 @@
-tap 'homebrew/cask-versions'
+brew tap 'homebrew/core'
 
 # brew 'ack' # Search tool like grep, but optimized for programmers
 brew 'ag' # Code-search similar to ack
 brew 'aspell' # Spell checker with better logic than ispell
 brew 'autoconf' # Automatic configure script builder
 brew 'automake' # Tool for generating GNU Standards-compliant Makefiles
+brew 'atuin'
 brew 'bat' # Clone of cat(1) with syntax highlighting and Git integration
-# brew 'cairo' # Vector graphics library with cross-device output support
-# brew 'carthage' # Decentralized dependency manager for Cocoa
+brew 'bluetoothconnector'
+brew 'blueutil'
+brew 'cairo' # Vector graphics library with cross-device output support
+brew 'carthage' # Decentralized dependency manager for Cocoa
 brew 'cmake' # Cross-platform make
-# brew 'cocoapods' # Dependency manager for Cocoa projects
+brew 'cocoapods' # Dependency manager for Cocoa projects
 brew 'colordiff' # Color-highlighted diff(1) output
 brew 'colormake' # Wrapper around make to colorize the output
 brew 'colortail' # Like tail(1), but with various colors for specified output
+brew 'czmq'
 brew 'dnsmasq' # Lightweight DNS forwarder and DHCP server - supports wildcards
-brew 'docker' # Pack, ship and run any application as a lightweight container
-brew 'docker-compose' # Isolated development environments using Docker
+brew 'esphome'
 brew 'fasd' # CLI tool for quick access to files and directories
 brew 'fdupes' # Identify or delete duplicate files
 brew 'ffmpeg' # Play, record, convert, and stream audio and video
@@ -25,8 +28,10 @@ brew 'fortune' # Infamous electronic fortune-cookie generator
 brew 'freetype' # Software library to render fonts
 brew 'gdbm' # GNU database manager
 brew 'gettext' # GNU internationalization (i18n) and localization (l10n) library
-# brew 'gifsicle' # GIF image/animation creator/editor; Monosnap chosen instead of this
+brew 'gh'
+brew 'gifsicle' # GIF image/animation creator/editor
 brew 'git' # Distributed revision control system
+brew 'git-filter-repo'
 brew 'git-lfs' # Git extension for versioning large files
 brew 'glib' # Core application library for C
 # brew 'global' # Source code tag system [emacs related]
@@ -37,6 +42,7 @@ brew 'graphviz' # Graph visualization software from AT&T and Bell Labs
 brew 'grc' # Colorize logfiles and command output
 brew 'grep' # GNU grep, egrep and fgrep
 brew 'harfbuzz' # OpenType text shaping engine
+brew 'homeassistant-cli'
 brew 'htop' # Improved top (interactive process viewer)
 brew 'icu4c' # C/C++ and Java libraries for Unicode and globalization
 brew 'iftop' # Display an interface's bandwidth usage
@@ -46,7 +52,8 @@ brew 'jenv' # Manage your Java environment
 brew 'jemalloc' # Implementation of malloc emphasizing fragmentation avoidance
 brew 'jpeg' # Image manipulation library
 # brew 'kubernetes-cli' # Kubernetes command-line interface
-# brew 'launchdns' # Mini DNS server designed solely to route queries to localhost VS dnsmasq ??
+brew 'lastpass-cli'
+brew 'launchdns' # Mini DNS server designed solely to route queries to localhost
 brew 'libevent' # Asynchronous event library
 brew 'libffi' # Portable Foreign Function Interface library
 brew 'libgcrypt' # Cryptographic library based on the code from GnuPG
@@ -62,125 +69,55 @@ brew 'llvm' # Next-gen compiler infrastructure
 brew 'mas' # Mac App Store command-line interface
 brew 'md5sha1sum' # Hash utilities
 brew 'memcached' # High performance, distributed memory object caching system
-brew 'nodenv' # Manage multiple NodeJS versions
-brew 'node-build' # Install NodeJS versions (NOTE: this isn't a dep of nodenv?)
+brew 'mercurial'
+brew 'moreutils'
 brew 'nginx' # HTTP(S) server and reverse proxy, and IMAP/POP3 proxy server
+brew 'node-build' # Install NodeJS versions
+brew 'nodenv' # Manage multiple NodeJS versions
 brew 'openssl' # Cryptography and SSL/TLS Toolkit
 brew 'p7zip' # 7-Zip (high compression file archiver) implementation
 brew 'pandoc' # Swiss-army knife of markup format conversion TODO: Look into this tool more
 brew 'pango' # Framework for layout and rendering of i18n text
 brew 'pcre' # Perl compatible regular expressions library
+brew 'pinentry-mac'
 brew 'pixman' # Low-level library for pixel manipulation
 brew 'pkg-config' # Manage compile and link flags for libraries
-brew 'postgresql' # Object-relational database system
+brew 'postgresql@16' # Object-relational database system
 brew 'pyenv' # Python version management
 brew 'rbenv' # Ruby version manager
 brew 'rbenv-default-gems' # Auto-installs gems for Ruby installs
 brew 'readline' # Library for command-line editing
 brew 'redis' # Persistent key-value database, with built-in net interface
 brew 'ruby-build' # Explicitly dependency of rbenv (installs different versions of ruby)
+brew 'sleepwatcher'
 brew 'sox' # SOund eXchange: universal sound sample translator
 brew 'sqlite' # Command-line interface for SQLite
+brew 'switchaudio-osx'
 brew 'telnet' # User interface to the TELNET protocol
 brew 'terminal-notifier' # Send macOS User Notifications from the command-line
 brew 'tree' # Display directories as trees (with optional color/HTML output)
 brew 'unrar' # Extract, view, and test RAR archives
+brew 'wakeonlan'
 brew 'watch' # Executes a program periodically, showing output fullscreen- brew links to https://gitlab.com/procps-ng/procps
 brew 'watchman' # Watch files and take action when they change
 brew 'wget' # Internet file retriever
 brew 'wrk' # HTTP benchmarking tool TODO: Look into this tool more
 brew 'xz' # General-purpose data compression with high compression ratio
+brew 'yt-dlp' # Download YouTube videos from the command-line
 brew 'youtube-dl' # Download YouTube videos from the command-line
+brew 'zeromq'
 brew 'zlib' # General-purpose lossless data-compression library
 brew 'zsh' # UNIX shell (command interpreter)
 
-cask 'airflow' # Watch local content on Apple TV and Chromecast. VS beamer?
-# cask 'arduino'
-cask 'arq' # Backup computer to the cloud
-# cask 'astropad' # turn your iPad into a professional drawing tablet
-cask 'atext' # aText accelerates your typing in any app by replacing abbreviations w/ freq used phrases you define. vs textexpander ?
-# cask 'atom' # Best text editor ever, much better than vim, emac, and especially space-macs # Install manually
-# cask 'audiobookbinder' # Convert all your mp3 books to iPod-compatible m4b format
-# cask 'audioscrobbler' # Minimal, robust iTunes scrobbling (for Last.fm)
-# cask 'barrier' # Open-source KVM software
-cask 'bartender'
-# 1 cask 'base' # Create, design, edit and browse SQLite 3 db files
-cask 'beamer' # Stream directly from your Mac to Apple TV and Chromecast
-cask 'brave-browser'
-# cask 'caffeine' # Prevent your Mac from automatically going to sleep, dimming the screen or starting screen savers; Amphetamine chosen instead
-cask 'carbon-copy-cloner' # Bootable backup solution for the Mac
-cask 'cheatsheet' # Hold the ⌘-Key a bit longer to get a list of all active short cuts of the current application
-cask 'choosy' # Open every link in the right browser
-cask 'chromedriver'
-cask 'dash'
-cask 'docker'
-cask 'discord'
-cask 'disk-arbitrator' # Forensic utility which manages file system mounting in support of forensic procedures
-cask 'duet' # Use a phone/tablet device as a second screen: Duet Pro still has features Sidecar does not (now in Catalina)
-cask 'dropbox'
-cask 'expressvpn' # Secure Mac VPN client
-cask 'fantastical' # Multi-device streamlined calendar app; it's FantastiCaL!
-cask 'firefox'
-cask 'firefox-developer-edition'
-cask 'flux' # A better Night Shift: kill blue light in your display gracefully at night
-cask 'fsmonitor' # Monitor all changes in the file system
-cask 'ghosttile' # Hide your running applications from Dock
-cask 'github'
-cask 'google-chrome'
-cask 'google-chrome-canary'
-cask 'grandperspective' # Graphically show disk usage
-cask 'hammerspoon' # New Slate but with even more features and functions
-cask 'hyper' # Electron-based terminal (built on HTML/CSS/JS)
-cask 'id3-editor' # Small and simple MP3 and AIFF ID3 tag editor
-cask 'insomnia' # Design and debug APIs like a human, not a robot
-# cask 'intel-power-gadget' # Software-based power usage monitoring tool for Intel® Core™ processors
-cask 'istat-menus' # This one looks like it's also in the app store, which is the better place to install it?
-cask 'iterm2' # Is it Hyper OR iTerm2? What do you think?
-cask 'itsycal' # Tiny menu bar calendar. -Is this better than the iStats one?
-# cask 'java' # We will install with jenv instead, and only install system java if required later on
-cask 'karabiner-elements' # A powerful and stable keyboard customizer -- Instead of Hammerspoon?
-cask 'knox' # 1Password's file valut program
-# cask 'launchbar' # quick launch programs
-# cask 'lingo' # The visual home for your brand; Create and share living style guides, asset libraries and more
-cask 'mojibar' # A menubar app adaptation of Emoji searcher.
-cask 'ngrok' # One command for an instant, secure URL to your localhost server through any NAT or firewall
-cask 'noun-project' # Icons for everything
-# cask 'nvalt' # Store and retrieve notes: Notational Velocity; https://nvultra.com/ is in private beta and will be out soon; Bear was chosen instead
-cask 'phantomjs'
-cask 'quitter' # Automatically hide or quit apps after periods of inactivity
-cask 'resilio-sync' # New name for bit torrent sync
-cask 'safari-technology-preview'
-# cask 'semulov' # Eject volumes from the menu bar
-cask 'sequel-pro' # DB management app for working with MySQL databases
-cask 'sketch' # Sketch 2 is already out, will this one work?
-cask 'skype'
-cask 'slack'
-cask 'slate' # Is this instead of hammerspoon?
-cask 'sonic-pi' # Sonic Pi is a code-based music creation and performance tool.
-cask 'spotify'
-# cask 'qobuz'
-# cask 'textexpander' # Easily insert text snippets in any application from a library of content created by you and your team; atext chosen instead
-cask 'tor-browser'
-cask 'transmission'
-cask 'tripmode' # save mobile data when on the go: stop background backups, updates, photos syncs, etc.
-cask 'vlc'
-cask 'vmware-fusion'
-cask 'webtorrent' # Streaming torrent app Web Torrent Desktop
-cask 'zeplin'
-cask 'zoomus'
+tap 'jakehilborn/jakehilborn'
+brew 'jakehilborn/jakehilborn/displayplacer'
 
-# Specific taps
-#
-# tap 'thoughtbot/formulae'
-# brew 'rcm' # RC file (dotfile) management: https://thoughtbot.github.io/rcm/rcm.7.html
-# consider using only if taking a very similar approach to mkcode dotfiles
-
-# tap 'd12frosted/emacs-plus'
-# brew 'emacs-plus'
+tap 'nodenv/nodenv'
+brew 'nodenv/nodenv/nodenv-default-packages'
 
 tap 'heroku/brew'
 brew 'heroku'
- 
+
 # tap 'mongodb/brew'
 # brew 'mongodb-community-compass'
 
@@ -194,22 +131,131 @@ brew 'heroku'
 # cask 'font-source-code-pro-for-powerline'
 # cask 'font-fantasque-sans-mono'
 
+# Specific taps
+#
+# tap 'thoughtbot/formulae'
+# brew 'rcm' # RC file (dotfile) management: https://thoughtbot.github.io/rcm/rcm.7.html
+# consider using only if taking a very similar approach to mkcode dotfiles
+
+# tap 'd12frosted/emacs-plus'
+# brew 'emacs-plus'
+
+cask '1password'
+cask 'abyssoft-teleport'
+cask 'airflow' # Watch local content on Apple TV and Chromecast. VS beamer?
+# cask 'arduino'
+cask 'arq' # Backup computer to the cloud
+# cask 'astropad' # turn your iPad into a professional drawing tablet
+cask 'atext' # aText accelerates your typing in any app by replacing abbreviations w/ freq used phrases you define. vs textexpander ?
+# cask 'atom' # Best text editor ever, much better than vim, emac, and especially space-macs # Install manually
+# cask 'audiobookbinder' # Convert all your mp3 books to iPod-compatible m4b format
+# cask 'audioscrobbler' # Minimal, robust iTunes scrobbling (for Last.fm)
+# cask 'barrier' # Open-source KVM software
+cask 'bartender'
+cask 'base' # Create, design, edit and browse SQLite 3 db files
+cask 'beamer' # Stream directly from your Mac to Apple TV and Chromecast
+cask 'beardedspice'
+cask 'brave-browser'
+# cask 'caffeine' # Prevent your Mac from automatically going to sleep, dimming the screen or starting screen savers; Amphetamine chosen instead
+cask 'carbon-copy-cloner' # Bootable backup solution for the Mac
+cask 'cheatsheet' # Hold the ⌘-Key a bit longer to get a list of all active short cuts of the current application
+cask 'choosy' # Open every link in the right browser
+cask 'chromedriver'
+cask 'coscreen'
+cask 'dash'
+cask 'discord'
+cask 'disk-arbitrator' # Forensic utility which manages file system mounting in support of forensic procedures
+cask 'docker'
+cask 'dropbox'
+cask 'duet' # Use a phone/tablet device as a second screen: Duet Pro still has features Sidecar does not (now in Catalina)
+cask 'elgato-camera-hub'
+cask 'expressvpn' # Secure Mac VPN client
+cask 'fantastical' # Multi-device streamlined calendar app; it's FantastiCaL!
+cask 'figma'
+cask 'firefox'
+cask 'firefox-developer-edition'
+cask 'flux' # A better Night Shift: kill blue light in your display gracefully at night
+cask 'fsmonitor' # Monitor all changes in the file system
+cask 'ghosttile' # Hide your running applications from Dock
+cask 'github'
+cask 'google-chrome'
+cask 'google-chrome-canary'
+cask 'grandperspective' # Graphically show disk usage
+cask 'hammerspoon' # New Slate but with even more features and functions
+cask 'handbrake'
+cask 'hyper' # Electron-based terminal (built on HTML/CSS/JS)
+cask 'id3-editor' # Small and simple MP3 and AIFF ID3 tag editor
+cask 'iina'
+cask 'insomnia' # Design and debug APIs like a human, not a robot
+# cask 'intel-power-gadget' # Software-based power usage monitoring tool for Intel® Core™ processors
+cask 'istat-menus' # This one looks like it's also in the app store, which is the better place to install it?
+cask 'iterm2' # Is it Hyper OR iTerm2? What do you think?
+cask 'itsycal' # Tiny menu bar calendar. -Is this better than the iStats one?
+# cask 'java' # We will install with jenv instead, and only install system java if required later on
+cask 'karabiner-elements' # A powerful and stable keyboard customizer -- Instead of Hammerspoon?
+cask 'knox' # 1Password's file valut program
+# cask 'launchbar' # quick launch programs
+cask 'licecap'
+# cask 'lingo' # The visual home for your brand; Create and share living style guides, asset libraries and more
+cask 'loopback'
+cask 'lunar'
+cask 'messenger'
+cask 'mojibar' # A menubar app adaptation of Emoji searcher.
+cask 'motu-m-series'
+cask 'ngrok' # One command for an instant, secure URL to your localhost server through any NAT or firewall
+cask 'notion'
+cask 'noun-project' # Icons for everything
+# cask 'nvalt' # Store and retrieve notes: Notational Velocity; https://nvultra.com/ is in private beta and will be out soon; Bear was chosen instead
+cask 'phantomjs'
+cask 'quitter' # Automatically hide or quit apps after periods of inactivity
+cask 'raycast'
+cask 'resilio-sync' # New name for bit torrent sync
+cask 'safari-technology-preview'
+cask 'semulov' # Eject volumes from the menu bar
+cask 'sequel-ace' # DB management app for working with MySQL databases
+cask 'sequel-pro' # DB management app for working with MySQL databases
+cask 'shifty'
+cask 'sketch' # Sketch 2 is already out, will this one work?
+cask 'skype'
+cask 'slack'
+cask 'slate' # Is this instead of hammerspoon?
+cask 'sonic-pi' # Sonic Pi is a code-based music creation and performance tool.
+cask 'spotify'
+# cask 'qobuz'
+# cask 'textexpander' # Easily insert text snippets in any application from a library of content created by you and your team; atext chosen instead
+cask 'tor-browser'
+cask 'transmission'
+cask 'tripmode' # save mobile data when on the go: stop background backups, updates, photos syncs, etc.
+cask 'visual-studio-code'
+cask 'vlc'
+cask 'vmware-fusion'
+cask 'webtorrent' # Streaming torrent app Web Torrent Desktop
+cask 'zeplin'
+cask 'zoom'
+cask 'zoomus'
+
+tap 'homebrew/cask-versions'
+
 # Mac App Store
 #
 # `mas list`
 #
 
-# mas 'Agenda', id: 1287445660 # Note taking program
+mas '1Password for Safari', id: 1569813296
 mas '1Password 7', id: 1333542190
-# mas 'Affinity Designer', id: 824171161 # Alternate program to Illustrator
-# mas 'Affinity Photo', id: 824183456 # Alternate program to Photoshop
-# mas 'Amphetamine', id: 937984704 # is this better than Caffine? Or perhaps Caffine isn't support in Mojave and above?
+mas 'Adguard for Safari', id: 1440147259
+mas 'Affinity Designer', id: 824171161 # Alternate program to Illustrator
+mas 'Affinity Photo', id: 824183456 # Alternate program to Photoshop
+# mas 'Agenda', id: 1287445660 # Note taking program
+mas 'Amphetamine', id: 937984704 # is this better than Caffine? Or perhaps Caffine isn't support in Mojave and above?
 mas 'Bear', id: 1091189122 # Private Markdown Notes
 mas 'Browser Ninja', id: 995838410 # Painlessly switch your default browser
 mas 'Clocks', id: 414554506 # World Clocks Menubar app
 mas 'Evernote', id: 406056744
 mas 'GarageBand', id: 682658836
 # mas 'HazeOver', id: 430798174 # Focus and reduce visual noise by dimming background windows/apps
+mas 'Home Assistant', id: 1099568401
+mas 'Hush Nag Blocker', id: 1544743900
 mas 'iMovie', id: 408981434
 # mas 'iStat Menus', id: 1319778037 # installed as a cask instead
 mas 'Keynote', id: 409183694
@@ -226,6 +272,7 @@ mas 'Pages', id: 409201541
 mas 'SiteSucker', id: 442168834
 mas 'Speedtest', id: 1153157709 # Simple Speedtest by Ookla
 # mas 'SQLPro Studio', id: 985614903 # Part of Setapp
+mas 'Tailscale', id: 1475387142
 mas 'The Unarchiver', id: 425424353
 mas 'Transmit', id: 403388562
 mas 'Wallpaperer', id: 1102248738

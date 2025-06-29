@@ -1,19 +1,12 @@
-#
-# Executes commands at the start of an interactive session.
-#
-# Authors:
-#   Sorin Ionescu <sorin.ionescu@gmail.com>
-#
+# Load zsh customizations
+for f in ~/.zsh/*; do source $f; done
 
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 fi
 
-# Customize to your needs...
+# # Add ~/bin and homebrew to PATH
+export PATH="$HOME/bin:/opt/workbrew/bin:/opt/homebrew/sbin:/opt/homebrew/bin:$PATH"
 
-# Load zsh customizations
-for f in ~/.zsh/*; do source $f; done
-
-# Add ~/bin to PATH
-export PATH="$HOME/bin:$PATH"
+eval "$(atuin init zsh)"
