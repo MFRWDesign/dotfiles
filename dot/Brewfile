@@ -2,6 +2,7 @@ brew tap 'homebrew/core'
 
 # brew 'ack' # Search tool like grep, but optimized for programmers
 brew 'ag' # Code-search similar to ack
+brew 'awscli' # AWS Command Line Interface
 brew 'aspell' # Spell checker with better logic than ispell
 brew 'autoconf' # Automatic configure script builder
 brew 'automake' # Tool for generating GNU Standards-compliant Makefiles
@@ -68,9 +69,11 @@ brew 'libyaml' # YAML Parser
 brew 'llvm' # Next-gen compiler infrastructure
 brew 'mas' # Mac App Store command-line interface
 brew 'md5sha1sum' # Hash utilities
+brew 'mkcert' # Simple tool for making locally-trusted development certificates
 brew 'memcached' # High performance, distributed memory object caching system
 brew 'mercurial'
 brew 'moreutils'
+brew 'mysql' # MySQL database server
 brew 'nginx' # HTTP(S) server and reverse proxy, and IMAP/POP3 proxy server
 brew 'node-build' # Install NodeJS versions
 brew 'nodenv' # Manage multiple NodeJS versions
@@ -94,6 +97,7 @@ brew 'sox' # SOund eXchange: universal sound sample translator
 brew 'sqlite' # Command-line interface for SQLite
 brew 'switchaudio-osx'
 brew 'telnet' # User interface to the TELNET protocol
+brew 'tesseract' # OCR (Optical Character Recognition) engine
 brew 'terminal-notifier' # Send macOS User Notifications from the command-line
 brew 'tree' # Display directories as trees (with optional color/HTML output)
 brew 'unrar' # Extract, view, and test RAR archives
@@ -103,6 +107,7 @@ brew 'watchman' # Watch files and take action when they change
 brew 'wget' # Internet file retriever
 brew 'wrk' # HTTP benchmarking tool TODO: Look into this tool more
 brew 'xz' # General-purpose data compression with high compression ratio
+brew 'yarn' # JavaScript package manager
 brew 'yt-dlp' # Download YouTube videos from the command-line
 brew 'youtube-dl' # Download YouTube videos from the command-line
 brew 'zeromq'
@@ -148,6 +153,8 @@ cask 'arq' # Backup computer to the cloud
 # cask 'astropad' # turn your iPad into a professional drawing tablet
 cask 'atext' # aText accelerates your typing in any app by replacing abbreviations w/ freq used phrases you define. vs textexpander ?
 # cask 'atom' # Best text editor ever, much better than vim, emac, and especially space-macs # Install manually
+cask 'claude' # Claude AI desktop app
+cask 'cursor' # AI-powered code editor
 # cask 'audiobookbinder' # Convert all your mp3 books to iPod-compatible m4b format
 # cask 'audioscrobbler' # Minimal, robust iTunes scrobbling (for Last.fm)
 # cask 'barrier' # Open-source KVM software
@@ -211,6 +218,7 @@ cask 'quitter' # Automatically hide or quit apps after periods of inactivity
 cask 'raycast'
 cask 'resilio-sync' # New name for bit torrent sync
 cask 'safari-technology-preview'
+cask 'screaming-frog-seo-spider' # Website crawler for SEO
 cask 'semulov' # Eject volumes from the menu bar
 cask 'sequel-ace' # DB management app for working with MySQL databases
 cask 'sequel-pro' # DB management app for working with MySQL databases
