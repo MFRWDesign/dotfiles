@@ -9,4 +9,12 @@ fi
 # # Add ~/bin and homebrew to PATH
 export PATH="$HOME/bin:/opt/workbrew/bin:/opt/homebrew/sbin:/opt/homebrew/bin:$PATH"
 
+# Add pipx bin directory to PATH (for fabric and other pipx-installed tools)
+export PATH="$PATH:$HOME/.local/bin"
+
+# Fabric AI tool configuration
+if [ -f "$HOME/.config/fabric/fabric-bootstrap.inc" ]; then
+  source "$HOME/.config/fabric/fabric-bootstrap.inc"
+fi
+
 eval "$(atuin init zsh)"
