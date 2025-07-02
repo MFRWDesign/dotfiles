@@ -22,5 +22,5 @@ declare -a apps=(
 
 for app in $apps; do
   echo 'Adding login item for '$app'.app'
-  osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/'$app'.app", hidden:true}' > /dev/null 2>&1
+  osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/'$app'.app", hidden:true}' > /dev/null 2>&1 || echo "  (skipped - app not found or already added)"
 done

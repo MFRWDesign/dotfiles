@@ -1,15 +1,37 @@
 #!/bin/zsh
 set -e
 
-# Accept the Xcode license
-sudo xcodebuild -license accept
+# Accept the Xcode license (only if full Xcode is installed)
+if [ -d "/Applications/Xcode.app" ]; then
+  sudo xcodebuild -license accept
+fi
+
+# Ensure version files are properly linked
+for tool in rbenv pyenv nodenv; do
+  if [ ! -f ~/.$tool/version ] && [ -f ~/.dotfiles/dot/$tool/version ]; then
+    echo "Creating missing $tool version symlink"
+    ln -sfn ~/.dotfiles/dot/$tool/version ~/.$tool/version
+  fi
+done
 
 # Ensure preferred language versions are installed
-rbenv install -s $(cat ~/.rbenv/version)
-brew rbenv-sync
+if [ -f ~/.rbenv/version ]; then
+  rbenv install -s $(cat ~/.rbenv/version)
+  brew rbenv-sync
+else
+  echo "Warning: ~/.rbenv/version not found, skipping Ruby installation"
+fi
 
-pyenv install -s $(cat ~/.pyenv/version)
-brew pyenv-sync
+if [ -f ~/.pyenv/version ]; then
+  pyenv install -s $(cat ~/.pyenv/version)
+  brew pyenv-sync
+else
+  echo "Warning: ~/.pyenv/version not found, skipping Python installation"
+fi
 
-nodenv install -s $(cat ~/.nodenv/version)
-brew nodenv-sync
+if [ -f ~/.nodenv/version ]; then
+  nodenv install -s $(cat ~/.nodenv/version)
+  brew nodenv-sync
+else
+  echo "Warning: ~/.nodenv/version not found, skipping Node installation"
+fi

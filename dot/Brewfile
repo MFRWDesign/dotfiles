@@ -1,4 +1,4 @@
-brew tap 'homebrew/core'
+# tap 'homebrew/core' # No longer needed
 
 # brew 'ack' # Search tool like grep, but optimized for programmers
 brew 'ag' # Code-search similar to ack
@@ -20,7 +20,7 @@ brew 'colortail' # Like tail(1), but with various colors for specified output
 brew 'czmq'
 brew 'dnsmasq' # Lightweight DNS forwarder and DHCP server - supports wildcards
 brew 'esphome'
-brew 'fasd' # CLI tool for quick access to files and directories
+# brew 'fasd' # Deprecated - CLI tool for quick access to files and directories
 brew 'fdupes' # Identify or delete duplicate files
 brew 'ffmpeg' # Play, record, convert, and stream audio and video
 brew 'fontconfig' # XML-based font configuration API for X Windows
@@ -100,7 +100,7 @@ brew 'telnet' # User interface to the TELNET protocol
 brew 'tesseract' # OCR (Optical Character Recognition) engine
 brew 'terminal-notifier' # Send macOS User Notifications from the command-line
 brew 'tree' # Display directories as trees (with optional color/HTML output)
-brew 'unrar' # Extract, view, and test RAR archives
+brew 'unar' # Extract archives (replacement for unrar)
 brew 'wakeonlan'
 brew 'watch' # Executes a program periodically, showing output fullscreen- brew links to https://gitlab.com/procps-ng/procps
 brew 'watchman' # Watch files and take action when they change
@@ -109,7 +109,7 @@ brew 'wrk' # HTTP benchmarking tool TODO: Look into this tool more
 brew 'xz' # General-purpose data compression with high compression ratio
 brew 'yarn' # JavaScript package manager
 brew 'yt-dlp' # Download YouTube videos from the command-line
-brew 'youtube-dl' # Download YouTube videos from the command-line
+# brew 'youtube-dl' # Disabled upstream - use yt-dlp instead
 brew 'zeromq'
 brew 'zlib' # General-purpose lossless data-compression library
 brew 'zsh' # UNIX shell (command interpreter)
@@ -154,7 +154,7 @@ cask 'arq' # Backup computer to the cloud
 cask 'atext' # aText accelerates your typing in any app by replacing abbreviations w/ freq used phrases you define. vs textexpander ?
 # cask 'atom' # Best text editor ever, much better than vim, emac, and especially space-macs # Install manually
 cask 'claude' # Claude AI desktop app
-cask 'cursor' # AI-powered code editor
+# cask 'cursor' # Already installed # AI-powered code editor
 # cask 'audiobookbinder' # Convert all your mp3 books to iPod-compatible m4b format
 # cask 'audioscrobbler' # Minimal, robust iTunes scrobbling (for Last.fm)
 # cask 'barrier' # Open-source KVM software
@@ -165,8 +165,8 @@ cask 'beardedspice'
 cask 'brave-browser'
 # cask 'caffeine' # Prevent your Mac from automatically going to sleep, dimming the screen or starting screen savers; Amphetamine chosen instead
 cask 'carbon-copy-cloner' # Bootable backup solution for the Mac
-cask 'cheatsheet' # Hold the ⌘-Key a bit longer to get a list of all active short cuts of the current application
-cask 'choosy' # Open every link in the right browser
+# cask 'cheatsheet' # Discontinued - Hold the ⌘-Key a bit longer to get a list of all active short cuts
+# cask 'choosy' # Requires macOS 14.6+ # Open every link in the right browser
 cask 'chromedriver'
 cask 'coscreen'
 cask 'dash'
@@ -180,13 +180,13 @@ cask 'expressvpn' # Secure Mac VPN client
 cask 'fantastical' # Multi-device streamlined calendar app; it's FantastiCaL!
 cask 'figma'
 cask 'firefox'
-cask 'firefox-developer-edition'
+cask 'firefox@developer-edition'
 cask 'flux' # A better Night Shift: kill blue light in your display gracefully at night
 cask 'fsmonitor' # Monitor all changes in the file system
 cask 'ghosttile' # Hide your running applications from Dock
 cask 'github'
 cask 'google-chrome'
-cask 'google-chrome-canary'
+cask 'google-chrome@canary'
 cask 'grandperspective' # Graphically show disk usage
 cask 'hammerspoon' # New Slate but with even more features and functions
 cask 'handbrake'
@@ -200,33 +200,34 @@ cask 'iterm2' # Is it Hyper OR iTerm2? What do you think?
 cask 'itsycal' # Tiny menu bar calendar. -Is this better than the iStats one?
 # cask 'java' # We will install with jenv instead, and only install system java if required later on
 cask 'karabiner-elements' # A powerful and stable keyboard customizer -- Instead of Hammerspoon?
-cask 'knox' # 1Password's file valut program
+# cask 'knox' # No longer available - 1Password's file vault program
 # cask 'launchbar' # quick launch programs
 cask 'licecap'
 # cask 'lingo' # The visual home for your brand; Create and share living style guides, asset libraries and more
 cask 'loopback'
 cask 'lunar'
 cask 'messenger'
-cask 'mojibar' # A menubar app adaptation of Emoji searcher.
+# cask 'mojibar' # Discontinued - A menubar app adaptation of Emoji searcher
 cask 'motu-m-series'
 cask 'ngrok' # One command for an instant, secure URL to your localhost server through any NAT or firewall
 cask 'notion'
 cask 'noun-project' # Icons for everything
 # cask 'nvalt' # Store and retrieve notes: Notational Velocity; https://nvultra.com/ is in private beta and will be out soon; Bear was chosen instead
-cask 'phantomjs'
+# cask 'phantomjs' # Discontinued
 cask 'quitter' # Automatically hide or quit apps after periods of inactivity
 cask 'raycast'
 cask 'resilio-sync' # New name for bit torrent sync
-cask 'safari-technology-preview'
+# cask 'safari-technology-preview' # Requires macOS Sequoia (15.0+)
 cask 'screaming-frog-seo-spider' # Website crawler for SEO
 cask 'semulov' # Eject volumes from the menu bar
 cask 'sequel-ace' # DB management app for working with MySQL databases
-cask 'sequel-pro' # DB management app for working with MySQL databases
+# cask 'sequel-pro' # Discontinued - use sequel-ace instead
 cask 'shifty'
 cask 'sketch' # Sketch 2 is already out, will this one work?
-cask 'skype'
+# cask 'skype' # Not needed
 cask 'slack'
-cask 'slate' # Is this instead of hammerspoon?
+# cask 'slate' # Not available as cask - Is this instead of hammerspoon?
+cask 'fertigt-slate' # Maintained fork of Slate window manager
 cask 'sonic-pi' # Sonic Pi is a code-based music creation and performance tool.
 cask 'spotify'
 # cask 'qobuz'
@@ -236,53 +237,53 @@ cask 'transmission'
 cask 'tripmode' # save mobile data when on the go: stop background backups, updates, photos syncs, etc.
 cask 'visual-studio-code'
 cask 'vlc'
-cask 'vmware-fusion'
+# cask 'vmware-fusion' # Requires manual download
 cask 'webtorrent' # Streaming torrent app Web Torrent Desktop
 cask 'zeplin'
-cask 'zoom'
-cask 'zoomus'
+# cask 'zoom' # Already installed
+# cask 'zoomus' # Use 'zoom' instead
 
-tap 'homebrew/cask-versions'
+# tap 'homebrew/cask-versions' # Deprecated tap
 
 # Mac App Store
 #
 # `mas list`
 #
 
-mas '1Password for Safari', id: 1569813296
-mas '1Password 7', id: 1333542190
-mas 'Adguard for Safari', id: 1440147259
+# mas '1Password for Safari', id: 1569813296
+# mas '1Password 7', id: 1333542190
+# mas 'Adguard for Safari', id: 1440147259
 mas 'Affinity Designer', id: 824171161 # Alternate program to Illustrator
 mas 'Affinity Photo', id: 824183456 # Alternate program to Photoshop
 # mas 'Agenda', id: 1287445660 # Note taking program
-mas 'Amphetamine', id: 937984704 # is this better than Caffine? Or perhaps Caffine isn't support in Mojave and above?
-mas 'Bear', id: 1091189122 # Private Markdown Notes
-mas 'Browser Ninja', id: 995838410 # Painlessly switch your default browser
+# mas 'Amphetamine', id: 937984704 # is this better than Caffine? Or perhaps Caffine isn't support in Mojave and above?
+# mas 'Bear', id: 1091189122 # Private Markdown Notes
+# mas 'Browser Ninja', id: 995838410 # Painlessly switch your default browser
 mas 'Clocks', id: 414554506 # World Clocks Menubar app
-mas 'Evernote', id: 406056744
+# mas 'Evernote', id: 406056744
 mas 'GarageBand', id: 682658836
 # mas 'HazeOver', id: 430798174 # Focus and reduce visual noise by dimming background windows/apps
-mas 'Home Assistant', id: 1099568401
-mas 'Hush Nag Blocker', id: 1544743900
+# mas 'Home Assistant', id: 1099568401
+# mas 'Hush Nag Blocker', id: 1544743900
 mas 'iMovie', id: 408981434
 # mas 'iStat Menus', id: 1319778037 # installed as a cask instead
 mas 'Keynote', id: 409183694
 mas 'Kindle', id: 405399194
 # mas 'Mail Notifr', id: 808154494 # Simple mail notifier for Gmail
-mas 'Markdown Pro', id: 465965038
-mas 'Monosnap', id: 540348655
+# mas 'Markdown Pro', id: 465965038
+# mas 'Monosnap', id: 540348655
 mas 'Numbers', id: 409203825
 mas 'OmniFocus', id: 867299399
 mas 'Orangered Notifier', id: 468366517 # Put reddit alerts in your menu bar
 # mas 'Padlock', id: 415667090 # `mas info 415667090` results in "No results found - Error: No results found"
 mas 'Pages', id: 409201541
 # mas 'Pixelmator', id: 407963104 # Full-featured image editor allows edits to photoshop files
-mas 'SiteSucker', id: 442168834
-mas 'Speedtest', id: 1153157709 # Simple Speedtest by Ookla
+# mas 'SiteSucker', id: 442168834
+# mas 'Speedtest', id: 1153157709 # Simple Speedtest by Ookla
 # mas 'SQLPro Studio', id: 985614903 # Part of Setapp
-mas 'Tailscale', id: 1475387142
-mas 'The Unarchiver', id: 425424353
+# mas 'Tailscale', id: 1475387142
+# mas 'The Unarchiver', id: 425424353
 mas 'Transmit', id: 403388562
-mas 'Wallpaperer', id: 1102248738
+# mas 'Wallpaperer', id: 1102248738
 # mas 'Xcode', id: 497799835 # Install manually because it's such a large file
-mas 'Yoink', id: 457622435 # Improved drag & drop with clipboard functionality
+# mas 'Yoink', id: 457622435 # Improved drag & drop with clipboard functionality
