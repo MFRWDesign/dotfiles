@@ -326,24 +326,24 @@ Current remaining changes:"
         # Extract ALL file paths from the patch - both from diff headers and the patch itself
         FILE_LIST=""
         FILE_COUNT=0
-
+        
         # Method 1: Extract from diff headers
         while IFS= read -r line; do
             if [[ "$line" =~ [[:space:]]b/(.+)$ ]]; then
                 FILE_LIST="${FILE_LIST}${BASH_REMATCH[1]}"$'\n'
             fi
         done < <(grep -E "^diff --git" "$PATCH_FILE")
-
+        
         # Method 2: Also check for any +++ b/ lines (new files)
         while IFS= read -r line; do
             if [[ "$line" =~ ^\+\+\+[[:space:]]b/(.+)$ ]]; then
                 FILE_LIST="${FILE_LIST}${BASH_REMATCH[1]}"$'\n'
             fi
         done < <(grep -E "^\+\+\+ b/" "$PATCH_FILE")
-
+        
         # Sort and deduplicate the combined list
         UNIQUE_FILES=$(echo "$FILE_LIST" | sort -u | grep -v '^$')
-
+        
         # Display the files
         while IFS= read -r file; do
             [ -n "$file" ] && echo "  $file" && ((FILE_COUNT++))
@@ -371,9 +371,8 @@ Current remaining changes:"
         if [ -z "$answer" ] || [ "$answer" = "Y" ] || [ "$answer" = "y" ]; then
             echo -e "\n🔧 Applying patch..."
             
-            # Save current state
-            git stash push --include-untracked -q -m "git-smrtsnap-auto temporary"
-            STASH_CREATED=$?
+            # Reset to clean state (unstage everything)
+            git reset HEAD -- . >/dev/null 2>&1
             
             # Apply the patch
             if git apply --check "$PATCH_FILE" 2>/dev/null; then
@@ -408,36 +407,6 @@ Current remaining changes:"
                 # Record success in planning history
                 echo "OUTCOME: Committed - $DESCRIPTION" >> "$PLANNING_HISTORY"
                 echo "" >> "$PLANNING_HISTORY"
-                
-                # Restore remaining changes
-                if [ $STASH_CREATED -eq 0 ]; then
-                    # First try to pop normally
-                    if ! git stash pop -q 2>/dev/null; then
-                        # If that fails due to conflicts, try harder
-                        echo "Note: Normal stash pop failed, attempting force restore..." >&2
-                        
-                        # Get the stash ref
-                        STASH_REF=$(git stash list | head -1 | cut -d: -f1)
-                        
-                        if [ -n "$STASH_REF" ]; then
-                            # List all files in the stash
-                            git diff --name-only "$STASH_REF"^.."$STASH_REF" | while read -r file; do
-                                # For files that exist, skip them (they were just committed)
-                                if [ ! -e "$file" ]; then
-                                    # Restore files that don't exist
-                                    git checkout "$STASH_REF" -- "$file" 2>/dev/null || true
-                                fi
-                            done
-                            
-                            # Drop the stash since we handled it manually
-                            git stash drop -q || true
-                        else
-                            echo "Warning: Could not restore stashed changes. Run 'git stash list' to check." >&2
-                        fi
-                    else
-                        git reset -q HEAD -- .  # Unstage to restore original state
-                    fi
-                fi
             else
                 echo "⚠️  Error: Failed to apply patch" >&2
                 echo "Patch validation errors:"
@@ -446,15 +415,6 @@ Current remaining changes:"
                 # Show the patch content for debugging
                 echo -e "\nPatch content (first 50 lines):"
                 head -n 50 "$PATCH_FILE" | sed 's/^/  /'
-                
-                # Restore state
-                if [ $STASH_CREATED -eq 0 ]; then
-                    # Force restore for failure case - less careful since patch failed anyway
-                    git stash pop -q 2>/dev/null || {
-                        echo "Note: Forcing stash restoration after patch failure..." >&2
-                        git stash drop -q 2>/dev/null || true
-                    }
-                fi
                 
                 # Record failure in planning history
                 echo "OUTCOME: Failed to apply patch - $DESCRIPTION" >> "$PLANNING_HISTORY"
