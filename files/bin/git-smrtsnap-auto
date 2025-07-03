@@ -1,0 +1,455 @@
+#!/bin/bash
+
+# Start total timer
+TOTAL_START=$(date +%s)
+
+# Check if claude is available
+if ! command -v claude &> /dev/null; then
+    echo "Error: 'claude' command not found. Please install Claude CLI." >&2
+    exit 1
+fi
+
+# Check if in a git repository
+if ! git rev-parse --git-dir &> /dev/null; then
+    echo "Error: Not in a git repository" >&2
+    exit 1
+fi
+
+# Check if git-snapshotc is available
+if ! command -v git-snapshotc &> /dev/null; then
+    echo "Error: 'git-snapshotc' command not found in PATH" >&2
+    echo "Make sure files/bin is in your PATH" >&2
+    exit 1
+fi
+
+# Function to check if there are any changes
+has_changes() {
+    [ -n "$(git status --porcelain)" ]
+}
+
+# Set up cleanup with portable mktemp
+TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/git-smrtsnap-auto.XXXXXX") || {
+    echo "Error: Failed to create temporary directory" >&2
+    exit 1
+}
+chmod 700 "$TEMP_DIR"
+trap 'rm -rf "$TEMP_DIR" 2>/dev/null' EXIT INT TERM
+
+# Track full planning history for context
+PLANNING_HISTORY="$TEMP_DIR/planning-history.txt"
+> "$PLANNING_HISTORY"  # Initialize empty
+
+# Main loop - continue until no changes remain
+ITERATION=0
+MAX_ITERATIONS=20
+while has_changes; do
+    ((ITERATION++))
+    
+    # Prevent infinite loops
+    if [ $ITERATION -gt $MAX_ITERATIONS ]; then
+        echo "Error: Exceeded maximum iterations ($MAX_ITERATIONS). Aborting to prevent infinite loop." >&2
+        echo "Remaining changes can be committed manually." >&2
+        exit 1
+    fi
+    
+    # Check if there are staged changes
+    if [ -z "$(git diff --cached --name-only)" ]; then
+        echo -e "\n🔄 Iteration $ITERATION: Analyzing remaining changes..."
+        
+        # Save current diff including untracked files
+        DIFF_FILE="$TEMP_DIR/diff-$ITERATION.txt"
+        {
+            # First, show the regular diff for tracked files
+            git --no-pager diff --no-color
+            
+            # Then, show untracked files as new file diffs
+            git status --porcelain | grep "^??" | cut -c4- | while IFS= read -r file; do
+                if [ -f "$file" ]; then
+                    echo "diff --git a/$file b/$file"
+                    # Check if file is executable
+                    if [ -x "$file" ]; then
+                        echo "new file mode 100755"
+                    else
+                        echo "new file mode 100644"
+                    fi
+                    echo "index 0000000..0000000"
+                    echo "--- /dev/null"
+                    echo "+++ b/$file"
+                    lines=$(wc -l < "$file")
+                    echo "@@ -0,0 +1,$lines @@"
+                    sed 's/^/+/' "$file"
+                elif [ -d "$file" ]; then
+                    # For directories, show all files within
+                    find "$file" -type f | while IFS= read -r subfile; do
+                        echo "diff --git a/$subfile b/$subfile"
+                        # Check if file is executable
+                        if [ -x "$subfile" ]; then
+                            echo "new file mode 100755"
+                        else
+                            echo "new file mode 100644"
+                        fi
+                        echo "index 0000000..0000000"
+                        echo "--- /dev/null"
+                        echo "+++ b/$subfile"
+                        lines=$(wc -l < "$subfile")
+                        echo "@@ -0,0 +1,$lines @@"
+                        sed 's/^/+/' "$subfile"
+                    done
+                fi
+            done
+        } > "$DIFF_FILE"
+        
+        # Create the analysis prompt
+        ANALYSIS_PROMPT='Analyze this git diff AND status to identify the NEXT logical commit.
+Create a git patch containing changes for one complete feature.
+
+Output format:
+===COMMIT_START===
+DESCRIPTION: Brief description (max 30 chars)
+REASONING: One line explaining why these changes belong together
+===PATCH_START===
+[Insert a valid git diff patch containing ONLY the changes for this feature]
+===PATCH_END===
+===COMMIT_END===
+
+Rules:
+- Pick ONE COMPLETE FEATURE - include ALL files needed for it to work
+- CRITICAL: If adding aliases/commands, include BOTH the config AND implementation files
+- For new files, create proper diff headers: diff --git a/newfile b/newfile
+  followed by: new file mode 100755 (for executables) or 100644 (for regular files)
+  followed by: index 0000000..0000000
+  followed by: --- /dev/null
+  followed by: +++ b/newfile
+  followed by: @@ -0,0 +1,N @@ (where N is number of lines)
+  followed by: the file contents with + prefix on each line
+- Examples of complete features:
+  - Git aliases + their script implementations + prompt files
+  - Config change + its supporting files
+  - Documentation files that stand alone
+- Group files that would be broken without each other
+
+Here is the current status and diff:
+
+IMPORTANT CONTEXT - Previous iteration plans and outcomes:'
+        
+        # Include planning history if this is not the first iteration
+        if [ $ITERATION -gt 1 ] && [ -s "$PLANNING_HISTORY" ]; then
+            ANALYSIS_PROMPT="${ANALYSIS_PROMPT}
+$(cat "$PLANNING_HISTORY")
+
+Based on the above plans from previous iterations, identify the NEXT logical commit that hasn't been completed yet."
+        fi
+        
+        ANALYSIS_PROMPT="${ANALYSIS_PROMPT}
+
+Current remaining changes:"
+
+        echo "Sending changes to Claude for analysis..."
+        
+        # Start timer
+        START_TIME=$(date +%s)
+        
+        # Create response file
+        RESPONSE_FILE="$TEMP_DIR/response-$ITERATION.txt"
+        
+        # Create a debug file to see what we're sending
+        DEBUG_INPUT="$TEMP_DIR/debug-input-$ITERATION.txt"
+        {
+            echo "$ANALYSIS_PROMPT"
+            echo ""
+            echo "=== GIT STATUS ==="
+            git status --porcelain
+            echo ""
+            echo "=== GIT DIFF ==="
+            cat "$DIFF_FILE"
+        } > "$DEBUG_INPUT"
+        
+        # Check input size
+        INPUT_SIZE=$(wc -c < "$DEBUG_INPUT")
+        if [ $INPUT_SIZE -gt 500000 ]; then
+            echo "Warning: Input is very large ($(numfmt --to=iec $INPUT_SIZE 2>/dev/null || echo "$INPUT_SIZE bytes")). Claude may have trouble processing it." >&2
+        fi
+        
+        # Send to Claude
+        claude --print < "$DEBUG_INPUT" > "$RESPONSE_FILE" 2>&1 &
+        
+        CLAUDE_PID=$!
+        
+        # Show elapsed time while waiting with timeout
+        echo -n "⏱️  Elapsed: "
+        TIMEOUT=300  # 5 minutes
+        while kill -0 $CLAUDE_PID 2>/dev/null; do
+            CURRENT_TIME=$(date +%s)
+            ELAPSED=$((CURRENT_TIME - START_TIME))
+            printf "\r⏱️  Elapsed: %ds" $ELAPSED
+            
+            # Check for timeout
+            if [ $ELAPSED -gt $TIMEOUT ]; then
+                echo -e "\n⚠️  Timeout: Claude is taking too long (>${TIMEOUT}s). Killing process..." >&2
+                kill $CLAUDE_PID 2>/dev/null
+                wait $CLAUDE_PID
+                echo "Error: Claude request timed out" > "$RESPONSE_FILE"
+                break
+            fi
+            
+            sleep 1
+        done
+        
+        # Wait for completion
+        wait $CLAUDE_PID
+        CLAUDE_EXIT=$?
+        printf "\r⏱️  Completed in %ds\n" $(($(date +%s) - START_TIME))
+        
+        if [ $CLAUDE_EXIT -ne 0 ]; then
+            echo "Error: Failed to get commit plan from Claude" >&2
+            cat "$RESPONSE_FILE" >&2
+            exit 1
+        fi
+        
+        # Save the full response for planning history
+        echo "=== ITERATION $ITERATION PLAN ===" >> "$PLANNING_HISTORY"
+        echo "Timestamp: $(date)" >> "$PLANNING_HISTORY"
+        grep -E "^(DESCRIPTION:|REASONING:|Files:|===)" "$RESPONSE_FILE" >> "$PLANNING_HISTORY" || true
+        echo "" >> "$PLANNING_HISTORY"
+        
+        # Parse the response
+        IN_COMMIT=false
+        IN_PATCH=false
+        DESCRIPTION=""
+        REASONING=""
+        PATCH_FILE="$TEMP_DIR/patch-$ITERATION.diff"
+        
+        > "$PATCH_FILE"  # Clear patch file
+        
+        while IFS= read -r line; do
+            if [[ "$line" == "===COMMIT_START===" ]]; then
+                IN_COMMIT=true
+            elif [[ "$line" == "===COMMIT_END===" ]]; then
+                IN_COMMIT=false
+            elif [[ "$IN_COMMIT" == true ]]; then
+                if [[ "$line" =~ ^DESCRIPTION:\ (.+)$ ]]; then
+                    DESCRIPTION="${BASH_REMATCH[1]}"
+                elif [[ "$line" =~ ^REASONING:\ (.+)$ ]]; then
+                    REASONING="${BASH_REMATCH[1]}"
+                elif [[ "$line" == "===PATCH_START===" ]]; then
+                    IN_PATCH=true
+                elif [[ "$line" == "===PATCH_END===" ]]; then
+                    IN_PATCH=false
+                elif [[ "$IN_PATCH" == true ]]; then
+                    echo "$line" >> "$PATCH_FILE"
+                fi
+            fi
+        done < "$RESPONSE_FILE"
+        
+        # Validate we have a patch
+        if [ -z "$DESCRIPTION" ] || [ ! -s "$PATCH_FILE" ]; then
+            echo "Error: Claude did not provide a valid commit plan" >&2
+            echo "Description found: '$DESCRIPTION'" >&2
+            echo "Patch file size: $(wc -c < "$PATCH_FILE") bytes" >&2
+            echo "Response file size: $(wc -c < "$RESPONSE_FILE") bytes" >&2
+            echo "" >&2
+            
+            # If response is empty or very short, show what we sent
+            if [ ! -s "$RESPONSE_FILE" ] || [ $(wc -c < "$RESPONSE_FILE") -lt 50 ]; then
+                echo "Claude returned empty or error response. Input was:" >&2
+                echo "First 100 lines of input:" >&2
+                head -n 100 "$DEBUG_INPUT" | sed 's/^/  /' >&2
+                echo "" >&2
+                echo "Input file size: $(wc -c < "$DEBUG_INPUT") bytes" >&2
+                echo "Number of lines: $(wc -l < "$DEBUG_INPUT")" >&2
+                
+                # If it's exactly "Execution error", try a simpler approach
+                if grep -q "Execution error" "$RESPONSE_FILE" 2>/dev/null; then
+                    echo "" >&2
+                    echo "Claude returned 'Execution error'. This might be due to input complexity." >&2
+                    echo "Try running with fewer changes or check Claude's status." >&2
+                fi
+            else
+                echo "Claude's response:" >&2
+                cat "$RESPONSE_FILE" >&2
+            fi
+            
+            # Save debug files for manual inspection
+            echo "" >&2
+            echo "Debug files saved in: $TEMP_DIR" >&2
+            echo "  Input: debug-input-$ITERATION.txt" >&2
+            echo "  Response: response-$ITERATION.txt" >&2
+            
+            # Don't clean up on error so user can inspect
+            trap - EXIT
+            
+            # Offer fallback option
+            echo "" >&2
+            echo "Would you like to:" >&2
+            echo "  1) Retry with a smaller batch" >&2
+            echo "  2) Stage all remaining changes manually" >&2
+            echo "  3) Exit" >&2
+            printf "Choice [1-3]: " >&2
+            read -n 1 choice
+            echo "" >&2
+            
+            case "$choice" in
+                1)
+                    echo "Retrying with first 10 files only..." >&2
+                    # Limit to first 10 untracked files
+                    git status --porcelain | head -10 | cut -c4- | while read -r file; do
+                        git add "$file" 2>/dev/null || true
+                    done
+                    continue
+                    ;;
+                2)
+                    echo "Staging all remaining changes..." >&2
+                    git add -A
+                    git-snapshotc
+                    ;;
+                *)
+                    exit 1
+                    ;;
+            esac
+        fi
+        
+        # Show the plan
+        echo -e "\n📋 Next commit:"
+        echo "Description: $DESCRIPTION"
+        echo "Reasoning: $REASONING"
+        
+        # Show what files will be affected
+        echo -e "\nFiles to be modified:"
+        # Extract file paths from diff headers - handle filenames with spaces
+        grep -E "^diff --git" "$PATCH_FILE" | while IFS= read -r line; do
+            # Extract the b/ path (the destination file) - match everything after b/ to end of line
+            if [[ "$line" =~ [[:space:]]b/(.+)$ ]]; then
+                echo "  ${BASH_REMATCH[1]}"
+            fi
+        done | sort -u
+        
+        printf "\nProceed with this commit? [Y/n/v]: "
+        read answer
+        
+        if [ "$answer" = "v" ] || [ "$answer" = "V" ]; then
+            # View the patch
+            echo -e "\n📄 Patch content:"
+            cat "$PATCH_FILE"
+            echo -e "\n📊 Patch statistics:"
+            echo "  Lines: $(wc -l < "$PATCH_FILE")"
+            echo "  Size: $(wc -c < "$PATCH_FILE") bytes"
+            printf "\nProceed with this commit? [Y/n]: "
+            read answer
+        fi
+        
+        if [ -z "$answer" ] || [ "$answer" = "Y" ] || [ "$answer" = "y" ]; then
+            echo -e "\n🔧 Applying patch..."
+            
+            # Save current state
+            git stash push --include-untracked -q -m "git-smrtsnap-auto temporary"
+            STASH_CREATED=$?
+            
+            # Apply the patch
+            if git apply --check "$PATCH_FILE" 2>/dev/null; then
+                git apply "$PATCH_FILE"
+                
+                # Check for new executable files in the patch and set permissions
+                grep -B1 "^new file mode 100755" "$PATCH_FILE" | grep "^diff --git" | while read -r line; do
+                    if [[ "$line" =~ b/([^[:space:]]+)$ ]]; then
+                        file="${BASH_REMATCH[1]}"
+                        if [ -f "$file" ]; then
+                            chmod +x "$file"
+                        fi
+                    fi
+                done
+                
+                # Stage all changes from the patch
+                git add -A
+                
+                # Show what's staged
+                echo -e "\nStaged changes:"
+                git --no-pager diff --cached --name-status
+                
+                # Create the commit
+                echo -e "\nCreating snapshot commit..."
+                git-snapshotc
+                
+                # Record success in planning history
+                echo "OUTCOME: Committed - $DESCRIPTION" >> "$PLANNING_HISTORY"
+                echo "" >> "$PLANNING_HISTORY"
+                
+                # Restore remaining changes
+                if [ $STASH_CREATED -eq 0 ]; then
+                    # First try to pop normally
+                    if ! git stash pop -q 2>/dev/null; then
+                        # If that fails due to conflicts, try harder
+                        echo "Note: Normal stash pop failed, attempting force restore..." >&2
+                        
+                        # Get the stash ref
+                        STASH_REF=$(git stash list | head -1 | cut -d: -f1)
+                        
+                        if [ -n "$STASH_REF" ]; then
+                            # List all files in the stash
+                            git diff --name-only "$STASH_REF"^.."$STASH_REF" | while read -r file; do
+                                # For files that exist, skip them (they were just committed)
+                                if [ ! -e "$file" ]; then
+                                    # Restore files that don't exist
+                                    git checkout "$STASH_REF" -- "$file" 2>/dev/null || true
+                                fi
+                            done
+                            
+                            # Drop the stash since we handled it manually
+                            git stash drop -q || true
+                        else
+                            echo "Warning: Could not restore stashed changes. Run 'git stash list' to check." >&2
+                        fi
+                    else
+                        git reset -q HEAD -- .  # Unstage to restore original state
+                    fi
+                fi
+            else
+                echo "⚠️  Error: Failed to apply patch" >&2
+                echo "Patch validation errors:"
+                git apply --check "$PATCH_FILE" 2>&1 | sed 's/^/  /'
+                
+                # Show the patch content for debugging
+                echo -e "\nPatch content (first 50 lines):"
+                head -n 50 "$PATCH_FILE" | sed 's/^/  /'
+                
+                # Restore state
+                if [ $STASH_CREATED -eq 0 ]; then
+                    # Force restore for failure case - less careful since patch failed anyway
+                    git stash pop -q 2>/dev/null || {
+                        echo "Note: Forcing stash restoration after patch failure..." >&2
+                        git stash drop -q 2>/dev/null || true
+                    }
+                fi
+                
+                # Record failure in planning history
+                echo "OUTCOME: Failed to apply patch - $DESCRIPTION" >> "$PLANNING_HISTORY"
+                echo "" >> "$PLANNING_HISTORY"
+                
+                echo -e "\nTrying next iteration with remaining changes..."
+            fi
+        else
+            echo "Aborted by user."
+            # Record skip in planning history
+            echo "OUTCOME: Skipped by user - $DESCRIPTION" >> "$PLANNING_HISTORY"
+            echo "" >> "$PLANNING_HISTORY"
+            exit 0
+        fi
+    else
+        # Files are already staged - use normal snapshotc process
+        echo -e "\n📦 Found staged changes, creating commit..."
+        git-snapshotc
+    fi
+done
+
+echo -e "\n✅ All changes committed!"
+
+# Show total elapsed time
+TOTAL_END=$(date +%s)
+TOTAL_ELAPSED=$((TOTAL_END - TOTAL_START))
+TOTAL_MINS=$((TOTAL_ELAPSED / 60))
+TOTAL_SECS=$((TOTAL_ELAPSED % 60))
+
+if [ $TOTAL_MINS -gt 0 ]; then
+    echo -e "\n⏱️  Total time: ${TOTAL_MINS}m ${TOTAL_SECS}s"
+else
+    echo -e "\n⏱️  Total time: ${TOTAL_ELAPSED}s"
+fi

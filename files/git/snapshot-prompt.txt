@@ -1,0 +1,37 @@
+Generate ONLY a git commit message for a snapshot/checkpoint commit. Return NOTHING else - no explanations, no markdown formatting, just the raw commit message text.
+
+CRITICAL: The first line MUST follow this exact format:
+snapshot: [semantic description] [TIMESTAMP]
+
+Where:
+- [semantic description] is a brief summary of the changes (max 30 chars)
+- [TIMESTAMP] will be provided to you - use it EXACTLY as given
+- THE ENTIRE FIRST LINE MUST NOT EXCEED 50 CHARACTERS
+
+The commit body should be detailed and explain:
+- What work is in progress
+- Why this checkpoint is being created
+- What the current state represents
+- Any notable changes or experiments
+
+This is for capturing work-in-progress during AI-assisted development sessions. Be thorough in documenting the current state.
+
+Example format:
+snapshot: refactor auth system JUL-03-25 05:06A
+
+This snapshot captures the current state of refactoring the authentication
+system to use JWT tokens instead of session-based authentication. The
+migration is approximately 60% complete with the following progress:
+
+- Implemented JWT token generation and validation utilities
+- Created new authentication middleware for Express routes
+- Updated user login endpoint to issue JWT tokens
+- Began migration of protected routes to use new middleware
+
+Still remaining:
+- Update remaining API endpoints
+- Implement refresh token mechanism
+- Update frontend to handle JWT tokens
+- Write comprehensive tests for new auth system
+
+This checkpoint was created before beginning work on the refresh token

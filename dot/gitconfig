@@ -12,6 +12,13 @@
 	gc = git commit -m
 	ga = git add
 	gst = git status
+	snapshotc = !git-snapshotc
+	smrtsnap = !git-smrtsnap
+	claudeautoc = !git-claudeautoc
+	smrtautoc = !git-smrtautoc
+	smrtsnap-partial = !git-smrtsnap-partial
+	smrtsnap-iter = !git-smrtsnap-iterative
+	smrtsnap-auto = !git-smrtsnap-auto
 [push]
 	default = simple
 [user]

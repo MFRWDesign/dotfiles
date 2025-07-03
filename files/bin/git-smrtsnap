@@ -1,0 +1,162 @@
+#!/bin/bash
+
+# Start total timer
+TOTAL_START=$(date +%s)
+
+# Check if claude is available
+if ! command -v claude &> /dev/null; then
+    echo "Error: 'claude' command not found. Please install Claude CLI." >&2
+    exit 1
+fi
+
+# Check if in a git repository
+if ! git rev-parse --git-dir &> /dev/null; then
+    echo "Error: Not in a git repository" >&2
+    exit 1
+fi
+
+# Check if there are staged changes
+if [ -z "$(git diff --cached --name-only)" ]; then
+    # No staged changes - analyze and plan commits
+    echo "No staged changes found. Analyzing working tree..."
+    
+    # Create a secure temporary file for the commit plan
+    PLAN_FILE=$(mktemp -p "${TMPDIR:-/tmp}" git-smrtsnap-plan.XXXXXX)
+    chmod 600 "$PLAN_FILE"
+    trap 'rm -f "$PLAN_FILE"' EXIT
+    
+    # Get status and diff, then ask Claude to plan commits
+    ANALYSIS_PROMPT='Analyze these git changes and create a commit plan. For each logical group of changes, output EXACTLY in this format (one line per field):
+
+COMMIT_START
+FILES: file1.txt file2.txt file3.txt
+DESCRIPTION: Brief semantic description (max 30 chars)
+COMMIT_END
+
+Rules:
+- GROUP BY FEATURE: Changes that implement a single feature/capability must be in ONE commit
+- Think in terms of "what feature does this add/change?" not individual files
+- IMPORTANT: If a file contains changes for MULTIPLE features, you must choose:
+  1. Put the file in the commit for its PRIMARY/DOMINANT feature, OR
+  2. Note files with mixed changes: add comment like "# Note: also contains X changes"
+- Examples of features that should be one commit:
+  - Adding authentication (even if it touches models, views, controllers, tests)
+  - Implementing local env support (config file + gitignore changes together)
+  - Adding a new command (script + config/alias changes together)
+- When grouping, consider: "Would this commit make sense and work on its own?"
+- Prefer fewer, larger feature commits over many tiny commits
+- If unsure, imagine explaining the commit to someone: all changes should support that explanation
+- List all files on the FILES line separated by spaces
+- Keep descriptions under 30 chars for the snapshot format
+- Output ONLY the commit blocks, no other text
+
+Here are the current changes:'
+
+    echo "Sending changes to Claude for analysis..."
+    echo "This may take a moment while Claude plans the optimal commit structure..."
+    
+    # Start timer and run claude in background
+    START_TIME=$(date +%s)
+    {
+        echo "$ANALYSIS_PROMPT"
+        echo "=== GIT STATUS ==="
+        git status --porcelain
+        echo "=== GIT DIFF ==="
+        git diff --no-color
+    } | claude --print > "$PLAN_FILE" 2>&1 &
+    CLAUDE_PID=$!
+    
+    # Show elapsed time while waiting
+    echo -n "⏱️  Elapsed: "
+    while kill -0 $CLAUDE_PID 2>/dev/null; do
+        CURRENT_TIME=$(date +%s)
+        ELAPSED=$((CURRENT_TIME - START_TIME))
+        printf "\r⏱️  Elapsed: %ds" $ELAPSED
+        sleep 1
+    done
+    
+    # Wait for completion and clear the line
+    wait $CLAUDE_PID
+    CLAUDE_EXIT=$?
+    printf "\r⏱️  Completed in %ds\n" $(($(date +%s) - START_TIME))
+    
+    # Check if claude failed
+    if [ $CLAUDE_EXIT -ne 0 ]; then
+        echo "Error: Failed to generate commit plan with Claude" >&2
+        cat "$PLAN_FILE" >&2
+        exit 1
+    fi
+    
+    # Show the plan to the user
+    echo -e "\n📋 Commit Plan:"
+    cat "$PLAN_FILE"
+    
+    printf "\nProceed with this plan? [Y/n]: "
+    read answer
+    
+    if [ -z "$answer" ] || [ "$answer" = "Y" ] || [ "$answer" = "y" ]; then
+        # Process each commit block
+        IN_COMMIT=false
+        FILES=""
+        DESCRIPTION=""
+        
+        while IFS= read -r line; do
+            if [[ "$line" == "COMMIT_START" ]]; then
+                IN_COMMIT=true
+                FILES=""
+                DESCRIPTION=""
+            elif [[ "$line" == "COMMIT_END" ]] && [[ "$IN_COMMIT" == true ]]; then
+                if [[ -n "$FILES" ]]; then
+                    echo -e "\n🔄 Staging files for: $DESCRIPTION"
+                    echo "   Files: $FILES"
+                    
+                    # Stage the files
+                    for file in $FILES; do
+                        if [ -e "$file" ]; then
+                            git add "$file"
+                        else
+                            echo "   ⚠️  Warning: File not found: $file"
+                        fi
+                    done
+                    
+                    # Show what's staged
+                    echo "   Staged changes:"
+                    git status --short --staged
+                    
+                    # Use snapshotc to commit
+                    echo "   Creating commit..."
+                    git-snapshotc
+                fi
+                IN_COMMIT=false
+            elif [[ "$IN_COMMIT" == true ]]; then
+                if [[ "$line" =~ ^FILES:\ (.+)$ ]]; then
+                    FILES="${BASH_REMATCH[1]}"
+                elif [[ "$line" =~ ^DESCRIPTION:\ (.+)$ ]]; then
+                    DESCRIPTION="${BASH_REMATCH[1]}"
+                fi
+            fi
+        done < "$PLAN_FILE"
+        
+        echo -e "\n✅ All commits completed!"
+        
+        # Show final status
+        echo -e "\nFinal status:"
+        git status --short
+    else
+        echo "Aborted."
+    fi
+else
+    # Files are already staged - use normal snapshotc process
+    git-snapshotc
+fi
+
+# Show total elapsed time
+TOTAL_END=$(date +%s)
+TOTAL_ELAPSED=$((TOTAL_END - TOTAL_START))
+TOTAL_MINS=$((TOTAL_ELAPSED / 60))
+TOTAL_SECS=$((TOTAL_ELAPSED % 60))
+
+if [ $TOTAL_MINS -gt 0 ]; then
+    echo -e "\n⏱️  Total time: ${TOTAL_MINS}m ${TOTAL_SECS}s"
+else
+    echo -e "\n⏱️  Total time: ${TOTAL_ELAPSED}s"
