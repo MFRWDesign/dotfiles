@@ -9,12 +9,11 @@ defaults write com.apple.dock persistent-apps -array
 # Remove all stacks from the Dock
 defaults write com.apple.dock persistent-others -array
 
-# MFRWDesign: Keeping Dock always visible (no auto-hide)
-# # Automatically hide and show the Dock
-# defaults write com.apple.dock autohide -bool true
-#
-# # Effectively disable the Dock by setting a large auto-hide delay
-# defaults write com.apple.dock autohide-delay -float 999999999
+# Automatically hide and show the Dock
+defaults write com.apple.dock autohide -bool true
+
+# Effectively disable the Dock by setting a large auto-hide delay
+defaults write com.apple.dock autohide-delay -float 999999999
 
 # MFRWDesign: Keeping hot corners enabled (useful for productivity)
 # # Disable top left hot corner
