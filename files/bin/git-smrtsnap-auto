@@ -121,6 +121,7 @@ REASONING: One line explaining why these changes belong together
 Rules:
 - Pick ONE COMPLETE FEATURE - include ALL files needed for it to work
 - CRITICAL: If adding aliases/commands, include BOTH the config AND implementation files
+- CRITICAL: The patch MUST include ALL files mentioned in DESCRIPTION/REASONING
 - For new files, create proper diff headers: diff --git a/newfile b/newfile
   followed by: new file mode 100755 (for executables) or 100644 (for regular files)
   followed by: index 0000000..0000000
@@ -133,6 +134,7 @@ Rules:
   - Config change + its supporting files
   - Documentation files that stand alone
 - Group files that would be broken without each other
+- VERIFY: Count the files in your patch and ensure it matches your plan
 
 Here is the current status and diff:
 
@@ -321,15 +323,31 @@ Current remaining changes:"
         
         # Show what files will be affected
         echo -e "\nFiles to be modified:"
-        # Extract file paths from diff headers - handle filenames with spaces
+        # Extract ALL file paths from the patch - both from diff headers and the patch itself
+        FILE_LIST=""
         FILE_COUNT=0
+
+        # Method 1: Extract from diff headers
         while IFS= read -r line; do
-            # Extract the b/ path (the destination file) - match everything after b/ to end of line
             if [[ "$line" =~ [[:space:]]b/(.+)$ ]]; then
-                echo "  ${BASH_REMATCH[1]}"
-                ((FILE_COUNT++))
+                FILE_LIST="${FILE_LIST}${BASH_REMATCH[1]}"$'\n'
             fi
-        done < <(grep -E "^diff --git" "$PATCH_FILE" | sort -u)
+        done < <(grep -E "^diff --git" "$PATCH_FILE")
+
+        # Method 2: Also check for any +++ b/ lines (new files)
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^\+\+\+[[:space:]]b/(.+)$ ]]; then
+                FILE_LIST="${FILE_LIST}${BASH_REMATCH[1]}"$'\n'
+            fi
+        done < <(grep -E "^\+\+\+ b/" "$PATCH_FILE")
+
+        # Sort and deduplicate the combined list
+        UNIQUE_FILES=$(echo "$FILE_LIST" | sort -u | grep -v '^$')
+
+        # Display the files
+        while IFS= read -r file; do
+            [ -n "$file" ] && echo "  $file" && ((FILE_COUNT++))
+        done <<< "$UNIQUE_FILES"
         
         # If no files found, something is wrong
         if [ $FILE_COUNT -eq 0 ]; then
@@ -359,7 +377,12 @@ Current remaining changes:"
             
             # Apply the patch
             if git apply --check "$PATCH_FILE" 2>/dev/null; then
-                git apply "$PATCH_FILE"
+                # Apply with whitespace fix, capture warnings
+                APPLY_OUTPUT=$(git apply --whitespace=fix "$PATCH_FILE" 2>&1)
+                WARNING_COUNT=$(echo "$APPLY_OUTPUT" | grep -c "warning:" || true)
+                if [ $WARNING_COUNT -gt 0 ]; then
+                    echo "  (Fixed $WARNING_COUNT whitespace issues)"
+                fi
                 
                 # Check for new executable files in the patch and set permissions
                 grep -B1 "^new file mode 100755" "$PATCH_FILE" | grep "^diff --git" | while read -r line; do

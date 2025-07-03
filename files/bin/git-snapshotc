@@ -49,6 +49,12 @@ Here are the staged changes:"
         exit 1
     fi
     
+    # Ensure first letter after "snapshot: " is capitalized
+    if [[ "$COMMIT_MSG" =~ ^(snapshot:\ )([a-z])(.*)$ ]]; then
+        # Capitalize the first letter of the description
+        COMMIT_MSG="${BASH_REMATCH[1]}$(echo "${BASH_REMATCH[2]}" | tr '[:lower:]' '[:upper:]')${BASH_REMATCH[3]}"
+    fi
+
     # Preview the commit message
     echo -e "\n📝 Generated commit message:"
     echo "----------------------------------------"
