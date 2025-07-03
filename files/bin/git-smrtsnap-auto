@@ -52,6 +52,12 @@ while has_changes; do
         exit 1
     fi
     
+    # Double-check we still have changes
+    if ! has_changes; then
+        echo -e "\n✨ No changes remaining!"
+        break
+    fi
+    
     # Check if there are staged changes
     if [ -z "$(git diff --cached --name-only)" ]; then
         echo -e "\n🔄 Iteration $ITERATION: Analyzing remaining changes..."
@@ -316,12 +322,19 @@ Current remaining changes:"
         # Show what files will be affected
         echo -e "\nFiles to be modified:"
         # Extract file paths from diff headers - handle filenames with spaces
-        grep -E "^diff --git" "$PATCH_FILE" | while IFS= read -r line; do
+        FILE_COUNT=0
+        while IFS= read -r line; do
             # Extract the b/ path (the destination file) - match everything after b/ to end of line
             if [[ "$line" =~ [[:space:]]b/(.+)$ ]]; then
                 echo "  ${BASH_REMATCH[1]}"
+                ((FILE_COUNT++))
             fi
-        done | sort -u
+        done < <(grep -E "^diff --git" "$PATCH_FILE" | sort -u)
+        
+        # If no files found, something is wrong
+        if [ $FILE_COUNT -eq 0 ]; then
+            echo "  (No files detected - patch may be empty)"
+        fi
         
         printf "\nProceed with this commit? [Y/n/v]: "
         read answer
@@ -437,6 +450,12 @@ Current remaining changes:"
         # Files are already staged - use normal snapshotc process
         echo -e "\n📦 Found staged changes, creating commit..."
         git-snapshotc
+    fi
+    
+    # Check if there are still changes after the commit
+    if ! has_changes; then
+        echo -e "\n✨ No more changes to commit!"
+        break
     fi
 done
 
