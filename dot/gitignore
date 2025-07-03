@@ -25,3 +25,8 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Local environment files (never commit these)
+.zshrc.local
+.env.local
+.envrc.local
