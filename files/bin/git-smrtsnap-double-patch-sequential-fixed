@@ -1,0 +1,590 @@
+#!/bin/bash
+#
+# git-smrtsnap-double-patch-sequential-fixed - AI-powered tool that creates two logical commits
+# using sequential patch generation where the second patch is created after applying the first
+#
+set -euo pipefail
+
+# Colors for output
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo -e "${CYAN}🤖 git-smrtsnap-double-patch-sequential-fixed - Sequential two-patch commit creation${NC}"
+
+# Check if claude is available
+if ! command -v claude &> /dev/null; then
+    echo -e "${RED}Error: 'claude' command not found. Please install Claude CLI.${NC}" >&2
+    exit 1
+fi
+
+# Check if in a git repository
+if ! git rev-parse --git-dir &> /dev/null; then
+    echo -e "${RED}Error: Not in a git repository${NC}" >&2
+    exit 1
+fi
+
+# Check for changes
+if [ -z "$(git status --porcelain)" ]; then
+    echo -e "${YELLOW}No changes to commit${NC}"
+    exit 0
+fi
+
+# Create temporary directory
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf $TEMP_DIR" EXIT
+
+echo -e "${CYAN}📊 Analyzing changes...${NC}"
+
+# Capture current state
+echo "Capturing current state..."
+
+# Create diff for tracked changes only (modified and deleted files)
+git --no-pager diff HEAD --no-color -U10 > "$TEMP_DIR/tracked-diff.txt"
+
+# Create list of untracked files
+git status --porcelain | grep "^??" | cut -c4- > "$TEMP_DIR/untracked-files.txt"
+
+# Create comprehensive diff for Claude's analysis (includes new files for context)
+{
+    # Show the regular diff for all tracked changes (includes deletions)
+    cat "$TEMP_DIR/tracked-diff.txt"
+    
+    # Then, show untracked files as new file diffs for context
+    while IFS= read -r file; do
+        if [ -f "$file" ]; then
+            echo "diff --git a/$file b/$file"
+            if [ -x "$file" ]; then
+                echo "new file mode 100755"
+            else
+                echo "new file mode 100644"
+            fi
+            echo "index 0000000..0000000"
+            echo "--- /dev/null"
+            echo "+++ b/$file"
+            lines=$(wc -l < "$file" 2>/dev/null || echo "0")
+            echo "@@ -0,0 +1,$lines @@"
+            # Only show first 20 lines for context
+            head -20 "$file" | sed 's/^/+/'
+            if [ "$lines" -gt 20 ]; then
+                echo "+... ($(($lines - 20)) more lines)"
+            fi
+        fi
+    done < "$TEMP_DIR/untracked-files.txt"
+} > "$TEMP_DIR/full-diff.txt"
+
+# Create git status summary
+git status --porcelain > "$TEMP_DIR/status.txt"
+
+# Create the prompt file for FIRST patch only
+cat > "$TEMP_DIR/prompt.txt" << 'EOF'
+Analyze these git changes and create the FIRST logical patch that represents the most important/foundational change.
+
+This is PHASE 1 of a two-phase sequential commit process. After this first patch is applied,
+I will generate a second patch for the remaining changes based on the new state.
+
+IMPORTANT: New/untracked files should be considered for grouping but NOT included in patch diffs.
+Instead, list them in the NEW_FILES field so we can git add them separately.
+
+Your response must contain ONLY the formatted output below, with no additional text before or after.
+
+Output format (follow EXACTLY):
+===ANALYSIS_START===
+Files to be included (list every file from git status):
+- file1.md (status: modified)
+- file2.md (status: deleted)
+- new1.sh (status: new/untracked)
+[... list ALL files ...]
+
+Selected for FIRST patch (most important/foundational):
+- file1.md (core functionality)
+- new1.sh (related new file)
+[... list files chosen for first patch ...]
+
+Reserved for SECOND patch (will be generated after first patch applied):
+- file2.md (dependent changes)
+[... list files for second patch ...]
+===ANALYSIS_END===
+
+===PATCH1_START===
+DESCRIPTION: Brief description for first commit (max 30 chars)
+REASONING: Why this is the most important/foundational change
+NEW_FILES: new1.sh,new2.md
+===DIFF_START===
+[Include diffs ONLY for modified/deleted files selected for first patch, NOT new files]
+===DIFF_END===
+===PATCH1_END===
+
+Critical rules:
+1. Only include files that belong in the FIRST, most foundational commit
+2. The patch must be independently valid and applicable
+3. Choose changes that other changes might depend on
+4. For deleted files, include the full deletion diff
+5. Preserve exact line numbers, whitespace, and formatting from the tracked-diff
+6. New files go in NEW_FILES field (comma-separated, no spaces), NOT in the diff
+
+Git status summary:
+EOF
+
+cat "$TEMP_DIR/status.txt" >> "$TEMP_DIR/prompt.txt"
+
+echo -e "\nTracked changes diff (modified/deleted files only - use this for the patch):" >> "$TEMP_DIR/prompt.txt"
+cat "$TEMP_DIR/tracked-diff.txt" >> "$TEMP_DIR/prompt.txt"
+
+echo -e "\nFull diff including new files (for context and grouping decisions only):" >> "$TEMP_DIR/prompt.txt"
+cat "$TEMP_DIR/full-diff.txt" >> "$TEMP_DIR/prompt.txt"
+
+echo -e "${CYAN}🤖 Sending to Claude for analysis...${NC}"
+echo "Diff contains $(wc -l < "$TEMP_DIR/tracked-diff.txt") lines of tracked changes"
+echo "Found $(wc -l < "$TEMP_DIR/untracked-files.txt") new files"
+
+# Call Claude with retries
+MAX_RETRIES=3
+RETRY_COUNT=0
+SUCCESS=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
+    if [ $RETRY_COUNT -gt 0 ]; then
+        echo -e "${YELLOW}⚠️  Retry attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES...${NC}"
+        sleep 2
+    fi
+    
+    # Create response file for this attempt
+    RESPONSE_FILE="$TEMP_DIR/response-attempt-$((RETRY_COUNT + 1)).txt"
+    
+    # Start timer and run claude in background
+    START_TIME=$(date +%s)
+    claude -p --output-format text < "$TEMP_DIR/prompt.txt" > "$RESPONSE_FILE" 2>&1 &
+    CLAUDE_PID=$!
+    
+    # Show elapsed time while waiting with timeout
+    echo -n "⏱️  Elapsed: "
+    TIMEOUT=250  # 250 seconds timeout
+    COMPLETED=false
+    
+    while kill -0 $CLAUDE_PID 2>/dev/null; do
+        CURRENT_TIME=$(date +%s)
+        ELAPSED=$((CURRENT_TIME - START_TIME))
+        printf "\r⏱️  Elapsed: %ds" $ELAPSED
+        
+        # Check for timeout
+        if [ $ELAPSED -gt $TIMEOUT ]; then
+            echo -e "\n${YELLOW}⚠️  Timeout: Claude is taking too long (>${TIMEOUT}s). Killing process...${NC}"
+            kill $CLAUDE_PID 2>/dev/null
+            wait $CLAUDE_PID
+            break
+        fi
+        
+        sleep 1
+    done
+    
+    # Wait for completion and clear the line
+    wait $CLAUDE_PID
+    CLAUDE_EXIT=$?
+    printf "\r⏱️  Completed in %ds\n" $(($(date +%s) - START_TIME))
+    
+    # Check if we got a valid response
+    if [ $CLAUDE_EXIT -eq 0 ] && [ -s "$RESPONSE_FILE" ]; then
+        RESPONSE=$(cat "$RESPONSE_FILE")
+        
+        # Check if response contains expected markers
+        if echo "$RESPONSE" | grep -q "===PATCH1_START===" && \
+           echo "$RESPONSE" | grep -q "===PATCH1_END===" && \
+           echo "$RESPONSE" | grep -q "===DIFF_START===" && \
+           echo "$RESPONSE" | grep -q "===DIFF_END==="; then
+            SUCCESS=true
+            echo "$RESPONSE" > "$TEMP_DIR/response.txt"
+        else
+            echo -e "${YELLOW}⚠️  Invalid response format from Claude${NC}"
+            ((RETRY_COUNT++))
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Claude request failed (exit code: $CLAUDE_EXIT)${NC}"
+        if [ -s "$RESPONSE_FILE" ]; then
+            echo "Error output:"
+            cat "$RESPONSE_FILE" | head -5
+        fi
+        ((RETRY_COUNT++))
+    fi
+done
+
+if [ "$SUCCESS" = false ]; then
+    echo -e "${RED}❌ Failed to get valid response from Claude after $MAX_RETRIES attempts${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Claude provided first patch${NC}"
+
+# Extract first patch
+echo "Extracting first patch..."
+
+sed -n '/===PATCH1_START===/,/===PATCH1_END===/p' "$TEMP_DIR/response.txt" > "$TEMP_DIR/patch1-section.txt"
+COMMIT1_DESC=$(grep "^DESCRIPTION: " "$TEMP_DIR/patch1-section.txt" | head -1 | sed 's/^DESCRIPTION: //')
+COMMIT1_REASON=$(grep "^REASONING: " "$TEMP_DIR/patch1-section.txt" | head -1 | sed 's/^REASONING: //')
+COMMIT1_NEW_FILES=$(grep "^NEW_FILES: " "$TEMP_DIR/patch1-section.txt" | head -1 | sed 's/^NEW_FILES: //')
+
+# Extract diff for first patch - get content between first DIFF_START and DIFF_END within PATCH1 section
+awk '/===DIFF_START===/{flag=1; next} /===DIFF_END===/{flag=0} flag' "$TEMP_DIR/patch1-section.txt" > "$TEMP_DIR/patch1.diff"
+
+# Fix any malformed line numbers (remove extra spaces)
+sed -i.bak 's/@@ -\([0-9]*\),\([0-9]*\) +\([0-9]*\),[ ]*\([0-9]*\) @@/@@ -\1,\2 +\3,\4 @@/g' "$TEMP_DIR/patch1.diff"
+
+# Validate patch exists (might be empty if only new files)
+if [ ! -f "$TEMP_DIR/patch1.diff" ]; then
+    touch "$TEMP_DIR/patch1.diff"
+fi
+
+echo -e "\n${CYAN}📝 Commit 1: $COMMIT1_DESC${NC}"
+echo "   Reasoning: $COMMIT1_REASON"
+[ -n "$COMMIT1_NEW_FILES" ] && echo "   New files: $COMMIT1_NEW_FILES"
+
+# Stash all changes to get to clean state
+echo -e "\n${CYAN}Stashing all changes to get clean state...${NC}"
+git stash push -u -m "git-smrtsnap-double-patch temporary stash"
+
+# Verify we can access the stash untracked files
+echo "Checking stash for new files..."
+STASH_UNTRACKED_COMMIT=$(git rev-parse stash@{0}^3 2>/dev/null || echo "")
+
+if [ -z "$STASH_UNTRACKED_COMMIT" ]; then
+    # Only error if we actually need new files for first commit
+    if [ -n "$COMMIT1_NEW_FILES" ]; then
+        echo -e "${RED}❌ Critical error: Need new files but no untracked files found in stash${NC}"
+        echo "Required files: $COMMIT1_NEW_FILES"
+        echo "Check your stash: git stash list"
+        exit 1
+    else
+        echo "✅ No new files needed for first commit"
+    fi
+else
+    echo "✅ Stash contains untracked files: $STASH_UNTRACKED_COMMIT"
+fi
+
+# Apply first patch
+echo -e "\n${CYAN}Applying first patch...${NC}"
+
+# First, record which files should have newlines at EOF from the original state
+> "$TEMP_DIR/files-with-final-newline.txt"
+git ls-tree -r stash@{0} --name-only 2>/dev/null | while read -r file; do
+    # Check if original file ended with newline
+    if git show stash@{0}:$file 2>/dev/null | tail -c 1 | od -An -tx1 | grep -q " 0a"; then
+        echo "$file" >> "$TEMP_DIR/files-with-final-newline.txt"
+    fi
+done
+
+# Apply the patch if it has content
+if [ -s "$TEMP_DIR/patch1.diff" ]; then
+    if ! git apply "$TEMP_DIR/patch1.diff"; then
+        echo -e "${RED}❌ First patch cannot be applied${NC}"
+        echo "Patch size: $(wc -l < "$TEMP_DIR/patch1.diff") lines"
+        echo "Restoring original state..."
+        # Clean up any restored files first
+        git clean -fd
+        git stash pop
+        exit 1
+    fi
+    
+    # Restore final newlines for files that should have them
+    echo "Checking for missing final newlines..."
+    for file in $(git diff --name-only HEAD 2>/dev/null || git status --porcelain | grep "^M" | cut -c4-); do
+        if [ -f "$file" ] && grep -q "^$file$" "$TEMP_DIR/files-with-final-newline.txt"; then
+            # Check if file is missing its final newline
+            if [ -n "$(tail -c 1 "$file" 2>/dev/null)" ]; then
+                echo "  Restoring final newline to $file"
+                echo >> "$file"
+            fi
+        fi
+    done
+fi
+
+# Restore and add new files for first commit
+if [ -n "$COMMIT1_NEW_FILES" ]; then
+    echo "Restoring and adding new files for commit 1: $COMMIT1_NEW_FILES"
+    IFS=',' read -ra NEW_FILES_ARRAY <<< "$COMMIT1_NEW_FILES"
+    for file in "${NEW_FILES_ARRAY[@]}"; do
+        if [ -n "$file" ]; then
+            # Restore file from stash if needed
+            if [ ! -f "$file" ] && [ -n "$STASH_UNTRACKED_COMMIT" ]; then
+                git checkout "$STASH_UNTRACKED_COMMIT" -- "$file" 2>/dev/null || true
+            fi
+            
+            if [ -f "$file" ]; then
+                git add "$file"
+                echo "  Added: $file"
+            else
+                echo -e "${RED}❌ Critical error: Required file not found: $file${NC}"
+                echo "Restoring original state..."
+                git clean -fd
+                git stash pop
+                exit 1
+            fi
+        fi
+    done
+fi
+
+# Stage only the changes we've applied (patch + new files)
+git add -u  # Stage modified/deleted files from patch
+TIMESTAMP=$(date +'%b-%d-%y %I:%M%p' | tr '[:lower:]' '[:upper:]')
+git commit -m "snapshot: $COMMIT1_DESC $TIMESTAMP"
+echo -e "${GREEN}✅ First commit created${NC}"
+
+# Now generate the second patch based on remaining changes
+echo -e "\n${CYAN}Step 2: Generating second patch from remaining changes...${NC}"
+
+# IMPORTANT: We do NOT pop the stash. Instead, we work with the clean state after commit 1
+# and ask Claude what remains to be done based on the original full diff
+
+# Get the current state (after first commit) to show Claude what's already done
+git --no-pager diff stash@{0} HEAD --no-color -U10 > "$TEMP_DIR/already-committed.txt"
+
+# Get the full original diff from stash to see what remains
+git --no-pager diff HEAD stash@{0} --no-color -U10 > "$TEMP_DIR/remaining-diff.txt"
+
+# Get list of remaining new files from stash
+if [ -n "$STASH_UNTRACKED_COMMIT" ]; then
+    git ls-tree -r --name-only "$STASH_UNTRACKED_COMMIT" > "$TEMP_DIR/all-stashed-new-files.txt"
+    # Filter out files already added in first commit
+    > "$TEMP_DIR/remaining-untracked.txt"
+    while IFS= read -r file; do
+        if [ -n "$COMMIT1_NEW_FILES" ]; then
+            # Check if this file was already added in commit 1
+            if ! echo ",$COMMIT1_NEW_FILES," | grep -q ",$file,"; then
+                echo "$file" >> "$TEMP_DIR/remaining-untracked.txt"
+            fi
+        else
+            echo "$file" >> "$TEMP_DIR/remaining-untracked.txt"
+        fi
+    done < "$TEMP_DIR/all-stashed-new-files.txt"
+else
+    > "$TEMP_DIR/remaining-untracked.txt"
+fi
+
+# Check if there are remaining changes
+if [ ! -s "$TEMP_DIR/remaining-diff.txt" ] && [ ! -s "$TEMP_DIR/remaining-untracked.txt" ]; then
+    echo -e "${YELLOW}No remaining changes - only one commit needed${NC}"
+    echo -e "${GREEN}✅ Single commit created successfully${NC}"
+    echo -e "${CYAN}Note: Temporary stash kept at stash@{0} for safety${NC}"
+    exit 0
+fi
+
+# No need for comprehensive diff since we're not working with actual files in working directory
+# The remaining changes are computed from the stash vs current HEAD
+
+# Create prompt for second patch
+cat > "$TEMP_DIR/prompt2.txt" << 'EOF'
+I have already created the first commit. Now I need to create a patch for ALL the remaining changes.
+
+The first commit already applied these changes:
+EOF
+
+echo "First commit: $COMMIT1_DESC" >> "$TEMP_DIR/prompt2.txt"
+echo "Files in first commit: Modified/deleted from patch + new files: $COMMIT1_NEW_FILES" >> "$TEMP_DIR/prompt2.txt"
+echo -e "\nChanges already committed:\n" >> "$TEMP_DIR/prompt2.txt"
+cat "$TEMP_DIR/already-committed.txt" >> "$TEMP_DIR/prompt2.txt"
+
+cat >> "$TEMP_DIR/prompt2.txt" << 'EOF'
+
+Now create a patch for ALL REMAINING changes that haven't been committed yet.
+
+This is PHASE 2 - generate a patch that will apply cleanly to the current state
+(which already has the first commit applied).
+
+IMPORTANT: 
+- Only include changes that are NOT in the first commit
+- The patch must apply cleanly to the current HEAD (after first commit)
+- Include ALL remaining changes - this must be exhaustive
+
+Your response must contain ONLY the formatted output below, with no additional text before or after.
+
+Output format (follow EXACTLY):
+===PATCH2_START===
+DESCRIPTION: Brief description for second commit (max 30 chars)
+REASONING: Why these remaining changes belong together
+NEW_FILES: new3.sh,new4.md
+===DIFF_START===
+[Include diffs for ALL remaining modified/deleted files, NOT new files]
+===DIFF_END===
+===PATCH2_END===
+
+Critical rules:
+1. Include ALL remaining changes that weren't in the first commit
+2. The patch must apply to the current state (after first patch)
+3. New files go in NEW_FILES field, NOT in the diff
+4. Preserve exact formatting
+
+Remaining changes to be included:
+EOF
+
+echo -e "\nRemaining changes (diff from current HEAD to original state):" >> "$TEMP_DIR/prompt2.txt"
+cat "$TEMP_DIR/remaining-diff.txt" >> "$TEMP_DIR/prompt2.txt"
+
+if [ -s "$TEMP_DIR/remaining-untracked.txt" ]; then
+    echo -e "\nRemaining new/untracked files:" >> "$TEMP_DIR/prompt2.txt"
+    cat "$TEMP_DIR/remaining-untracked.txt" >> "$TEMP_DIR/prompt2.txt"
+fi
+
+echo -e "${CYAN}🤖 Sending to Claude for second patch analysis...${NC}"
+echo "Remaining diff contains $(wc -l < "$TEMP_DIR/remaining-diff.txt") lines of tracked changes"
+echo "Found $(wc -l < "$TEMP_DIR/remaining-untracked.txt") remaining new files"
+
+# Call Claude with retries for second patch
+RETRY_COUNT=0
+SUCCESS=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
+    if [ $RETRY_COUNT -gt 0 ]; then
+        echo -e "${YELLOW}⚠️  Retry attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES...${NC}"
+        sleep 2
+    fi
+    
+    # Create response file for this attempt
+    RESPONSE_FILE="$TEMP_DIR/response2-attempt-$((RETRY_COUNT + 1)).txt"
+    
+    # Start timer and run claude in background
+    START_TIME=$(date +%s)
+    claude -p --output-format text < "$TEMP_DIR/prompt2.txt" > "$RESPONSE_FILE" 2>&1 &
+    CLAUDE_PID=$!
+    
+    # Show elapsed time while waiting with timeout
+    echo -n "⏱️  Elapsed: "
+    TIMEOUT=250  # 250 seconds timeout
+    COMPLETED=false
+    
+    while kill -0 $CLAUDE_PID 2>/dev/null; do
+        CURRENT_TIME=$(date +%s)
+        ELAPSED=$((CURRENT_TIME - START_TIME))
+        printf "\r⏱️  Elapsed: %ds" $ELAPSED
+        
+        # Check for timeout
+        if [ $ELAPSED -gt $TIMEOUT ]; then
+            echo -e "\n${YELLOW}⚠️  Timeout: Claude is taking too long (>${TIMEOUT}s). Killing process...${NC}"
+            kill $CLAUDE_PID 2>/dev/null
+            wait $CLAUDE_PID
+            break
+        fi
+        
+        sleep 1
+    done
+    
+    # Wait for completion and clear the line
+    wait $CLAUDE_PID
+    CLAUDE_EXIT=$?
+    printf "\r⏱️  Completed in %ds\n" $(($(date +%s) - START_TIME))
+    
+    # Check if we got a valid response
+    if [ $CLAUDE_EXIT -eq 0 ] && [ -s "$RESPONSE_FILE" ]; then
+        RESPONSE=$(cat "$RESPONSE_FILE")
+        
+        # Check if response contains expected markers
+        if echo "$RESPONSE" | grep -q "===PATCH2_START===" && \
+           echo "$RESPONSE" | grep -q "===DIFF_START===" && \
+           echo "$RESPONSE" | grep -q "===DIFF_END==="; then
+            SUCCESS=true
+            echo "$RESPONSE" > "$TEMP_DIR/response2.txt"
+        else
+            echo -e "${YELLOW}⚠️  Invalid response format from Claude${NC}"
+            ((RETRY_COUNT++))
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Claude request failed (exit code: $CLAUDE_EXIT)${NC}"
+        if [ -s "$RESPONSE_FILE" ]; then
+            echo "Error output:"
+            cat "$RESPONSE_FILE" | head -5
+        fi
+        ((RETRY_COUNT++))
+    fi
+done
+
+if [ "$SUCCESS" = false ]; then
+    echo -e "${RED}❌ Failed to get valid response from Claude after $MAX_RETRIES attempts${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Claude provided second patch${NC}"
+
+# Extract second patch
+echo "Extracting second patch..."
+
+sed -n '/===PATCH2_START===/,/===PATCH2_END===/p' "$TEMP_DIR/response2.txt" > "$TEMP_DIR/patch2-section.txt"
+COMMIT2_DESC=$(grep "^DESCRIPTION: " "$TEMP_DIR/patch2-section.txt" | head -1 | sed 's/^DESCRIPTION: //')
+COMMIT2_REASON=$(grep "^REASONING: " "$TEMP_DIR/patch2-section.txt" | head -1 | sed 's/^REASONING: //')
+COMMIT2_NEW_FILES=$(grep "^NEW_FILES: " "$TEMP_DIR/patch2-section.txt" | head -1 | sed 's/^NEW_FILES: //')
+
+# Extract diff for second patch
+awk '/===DIFF_START===/{flag=1; next} /===DIFF_END===/{flag=0} flag' "$TEMP_DIR/patch2-section.txt" > "$TEMP_DIR/patch2.diff"
+
+# Fix any malformed line numbers (remove extra spaces)
+sed -i.bak 's/@@ -\([0-9]*\),\([0-9]*\) +\([0-9]*\),[ ]*\([0-9]*\) @@/@@ -\1,\2 +\3,\4 @@/g' "$TEMP_DIR/patch2.diff"
+
+# Validate patch exists (might be empty if only new files)
+if [ ! -f "$TEMP_DIR/patch2.diff" ]; then
+    touch "$TEMP_DIR/patch2.diff"
+fi
+
+echo -e "\n${CYAN}📝 Commit 2: $COMMIT2_DESC${NC}"
+echo "   Reasoning: $COMMIT2_REASON"
+[ -n "$COMMIT2_NEW_FILES" ] && echo "   New files: $COMMIT2_NEW_FILES"
+
+# Apply second patch
+echo -e "\n${CYAN}Applying second patch...${NC}"
+
+# Apply the patch if it has content
+if [ -s "$TEMP_DIR/patch2.diff" ]; then
+    if ! git apply "$TEMP_DIR/patch2.diff"; then
+        echo -e "${RED}❌ Second patch cannot be applied${NC}"
+        echo "Patch size: $(wc -l < "$TEMP_DIR/patch2.diff") lines"
+        echo "Note: First commit was already created. Check git log."
+        echo "You may need to manually restore remaining changes from stash@{0}"
+        exit 1
+    fi
+    
+    # Restore final newlines for files that should have them
+    echo "Checking for missing final newlines..."
+    for file in $(grep "^diff --git" "$TEMP_DIR/patch2.diff" | sed 's/diff --git a\///' | sed 's/ b\/.*//' | sort -u); do
+        if [ -f "$file" ] && grep -q "^$file$" "$TEMP_DIR/files-with-final-newline.txt"; then
+            # Check if file is missing its final newline
+            if [ -n "$(tail -c 1 "$file" 2>/dev/null)" ]; then
+                echo "  Restoring final newline to $file"
+                echo >> "$file"
+            fi
+        fi
+    done
+fi
+
+# Restore new files for second commit from stash (without popping)
+if [ -n "$COMMIT2_NEW_FILES" ]; then
+    echo "Restoring new files for second change (leaving unstaged): $COMMIT2_NEW_FILES"
+    IFS=',' read -ra NEW_FILES_ARRAY <<< "$COMMIT2_NEW_FILES"
+    for file in "${NEW_FILES_ARRAY[@]}"; do
+        if [ -n "$file" ]; then
+            # Restore file from stash untracked commit
+            if [ -n "$STASH_UNTRACKED_COMMIT" ]; then
+                if git show "$STASH_UNTRACKED_COMMIT:$file" > "$file" 2>/dev/null; then
+                    echo "  Restored: $file"
+                else
+                    echo "  Warning: Could not restore $file from stash"
+                fi
+            else
+                echo "  Warning: No untracked stash commit found for $file"
+            fi
+        fi
+    done
+fi
+
+# Don't stage anything - leave patch 2 changes in working directory
+echo -e "${GREEN}✅ Second patch applied to working directory${NC}"
+
+# Show summary
+echo -e "\n${GREEN}🎉 Successfully created 1 commit and applied remaining changes to working directory:${NC}"
+git --no-pager log --oneline -1
+
+# Show current status - should show patch 2 changes as unstaged
+echo -e "\n${CYAN}Current status (remaining changes ready for next commit):${NC}"
+git status --short
+
+# Show completion message
+echo -e "\n${GREEN}✅ Done. All changes have been processed.${NC}"
+echo -e "${CYAN}Note: Temporary stash kept at stash@{0} for safety${NC}"
+echo "You can drop it manually with: git stash drop stash@{0}"
