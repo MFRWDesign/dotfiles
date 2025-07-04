@@ -58,6 +58,19 @@ while has_changes; do
         break
     fi
     
+    # Ensure temp directory still exists (it might have been cleaned up on error)
+    if [ ! -d "$TEMP_DIR" ]; then
+        echo "Error: Temporary directory was cleaned up unexpectedly. Recreating..." >&2
+        TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/git-smrtsnap-auto.XXXXXX") || {
+            echo "Error: Failed to create temporary directory" >&2
+            exit 1
+        }
+        chmod 700 "$TEMP_DIR"
+        # Recreate planning history file
+        PLANNING_HISTORY="$TEMP_DIR/planning-history.txt"
+        > "$PLANNING_HISTORY"
+    fi
+    
     # Check if there are staged changes
     if [ -z "$(git diff --cached --name-only)" ]; then
         echo -e "\n🔄 Iteration $ITERATION: Analyzing remaining changes..."
@@ -65,8 +78,8 @@ while has_changes; do
         # Save current diff including untracked files
         DIFF_FILE="$TEMP_DIR/diff-$ITERATION.txt"
         {
-            # First, show the regular diff for tracked files
-            git --no-pager diff --no-color
+            # First, show the regular diff for tracked files with more context
+            git --no-pager diff --no-color -U10
             
             # Then, show untracked files as new file diffs
             git status --porcelain | grep "^??" | cut -c4- | while IFS= read -r file; do
@@ -122,13 +135,9 @@ Rules:
 - Pick ONE COMPLETE FEATURE - include ALL files needed for it to work
 - CRITICAL: If adding aliases/commands, include BOTH the config AND implementation files
 - CRITICAL: The patch MUST include ALL files mentioned in DESCRIPTION/REASONING
-- For new files, create proper diff headers: diff --git a/newfile b/newfile
-  followed by: new file mode 100755 (for executables) or 100644 (for regular files)
-  followed by: index 0000000..0000000
-  followed by: --- /dev/null
-  followed by: +++ b/newfile
-  followed by: @@ -0,0 +1,N @@ (where N is number of lines)
-  followed by: the file contents with + prefix on each line
+- IMPORTANT: Look at git status - files marked with ?? are UNTRACKED and already exist
+- For UNTRACKED files (??), the diff already shows them as new files with proper headers
+- For MODIFIED files (M), use the diff as shown
 - Examples of complete features:
   - Git aliases + their script implementations + prompt files
   - Config change + its supporting files
@@ -154,8 +163,10 @@ Current remaining changes:"
 
         echo "Sending changes to Claude for analysis..."
         
-        # Start timer
-        START_TIME=$(date +%s)
+        # Try up to 3 times
+        MAX_CLAUDE_ATTEMPTS=3
+        CLAUDE_ATTEMPT=0
+        CLAUDE_SUCCESS=false
         
         # Create response file
         RESPONSE_FILE="$TEMP_DIR/response-$ITERATION.txt"
@@ -178,40 +189,65 @@ Current remaining changes:"
             echo "Warning: Input is very large ($(numfmt --to=iec $INPUT_SIZE 2>/dev/null || echo "$INPUT_SIZE bytes")). Claude may have trouble processing it." >&2
         fi
         
-        # Send to Claude
-        claude --print < "$DEBUG_INPUT" > "$RESPONSE_FILE" 2>&1 &
-        
-        CLAUDE_PID=$!
-        
-        # Show elapsed time while waiting with timeout
-        echo -n "⏱️  Elapsed: "
-        TIMEOUT=300  # 5 minutes
-        while kill -0 $CLAUDE_PID 2>/dev/null; do
-            CURRENT_TIME=$(date +%s)
-            ELAPSED=$((CURRENT_TIME - START_TIME))
-            printf "\r⏱️  Elapsed: %ds" $ELAPSED
+        while [ $CLAUDE_ATTEMPT -lt $MAX_CLAUDE_ATTEMPTS ] && [ "$CLAUDE_SUCCESS" = false ]; do
+            ((CLAUDE_ATTEMPT++))
             
-            # Check for timeout
-            if [ $ELAPSED -gt $TIMEOUT ]; then
-                echo -e "\n⚠️  Timeout: Claude is taking too long (>${TIMEOUT}s). Killing process..." >&2
-                kill $CLAUDE_PID 2>/dev/null
-                wait $CLAUDE_PID
-                echo "Error: Claude request timed out" > "$RESPONSE_FILE"
-                break
+            if [ $CLAUDE_ATTEMPT -gt 1 ]; then
+                echo "⚠️  Retry attempt $CLAUDE_ATTEMPT of $MAX_CLAUDE_ATTEMPTS..."
+                # Brief pause before retry
+                sleep 2
             fi
             
-            sleep 1
+            # Start timer
+            START_TIME=$(date +%s)
+            
+            # Send to Claude
+            claude --print < "$DEBUG_INPUT" > "$RESPONSE_FILE" 2>&1 &
+            
+            CLAUDE_PID=$!
+            
+            # Show elapsed time while waiting with timeout
+            echo -n "⏱️  Elapsed: "
+            TIMEOUT=300  # 5 minutes
+            while kill -0 $CLAUDE_PID 2>/dev/null; do
+                CURRENT_TIME=$(date +%s)
+                ELAPSED=$((CURRENT_TIME - START_TIME))
+                printf "\r⏱️  Elapsed: %ds" $ELAPSED
+                
+                # Check for timeout
+                if [ $ELAPSED -gt $TIMEOUT ]; then
+                    echo -e "\n⚠️  Timeout: Claude is taking too long (>${TIMEOUT}s). Killing process..." >&2
+                    kill $CLAUDE_PID 2>/dev/null
+                    wait $CLAUDE_PID
+                    echo "Error: Claude request timed out" > "$RESPONSE_FILE"
+                    break
+                fi
+                
+                sleep 1
+            done
+            
+            # Wait for completion
+            wait $CLAUDE_PID
+            CLAUDE_EXIT=$?
+            printf "\r⏱️  Completed in %ds\n" $(($(date +%s) - START_TIME))
+            
+            # Check if we got a valid response
+            if [ $CLAUDE_EXIT -eq 0 ] && [ -s "$RESPONSE_FILE" ]; then
+                # Check for "Execution error" in response
+                if grep -q "Execution error" "$RESPONSE_FILE" 2>/dev/null; then
+                    echo "⚠️  Claude returned 'Execution error'" >&2
+                else
+                    CLAUDE_SUCCESS=true
+                fi
+            else
+                echo "⚠️  Claude request failed (exit code: $CLAUDE_EXIT)" >&2
+            fi
         done
         
-        # Wait for completion
-        wait $CLAUDE_PID
-        CLAUDE_EXIT=$?
-        printf "\r⏱️  Completed in %ds\n" $(($(date +%s) - START_TIME))
-        
-        if [ $CLAUDE_EXIT -ne 0 ]; then
-            echo "Error: Failed to get commit plan from Claude" >&2
+        if [ "$CLAUDE_SUCCESS" = false ]; then
+            echo "Error: Failed to get commit plan from Claude after $MAX_CLAUDE_ATTEMPTS attempts" >&2
             cat "$RESPONSE_FILE" >&2
-            exit 1
+            # Continue to show the error and prompt, don't exit yet
         fi
         
         # Save the full response for planning history
@@ -220,7 +256,7 @@ Current remaining changes:"
         grep -E "^(DESCRIPTION:|REASONING:|Files:|===)" "$RESPONSE_FILE" >> "$PLANNING_HISTORY" || true
         echo "" >> "$PLANNING_HISTORY"
         
-        # Parse the response
+        # Parse the response (even if Claude failed, we need to check)
         IN_COMMIT=false
         IN_PATCH=false
         DESCRIPTION=""
@@ -229,7 +265,9 @@ Current remaining changes:"
         
         > "$PATCH_FILE"  # Clear patch file
         
-        while IFS= read -r line; do
+        # Only parse if Claude succeeded
+        if [ "$CLAUDE_SUCCESS" = true ] && [ -s "$RESPONSE_FILE" ]; then
+            while IFS= read -r line; do
             if [[ "$line" == "===COMMIT_START===" ]]; then
                 IN_COMMIT=true
             elif [[ "$line" == "===COMMIT_END===" ]]; then
@@ -247,7 +285,8 @@ Current remaining changes:"
                     echo "$line" >> "$PATCH_FILE"
                 fi
             fi
-        done < "$RESPONSE_FILE"
+            done < "$RESPONSE_FILE"
+        fi
         
         # Validate we have a patch
         if [ -z "$DESCRIPTION" ] || [ ! -s "$PATCH_FILE" ]; then
@@ -283,9 +322,6 @@ Current remaining changes:"
             echo "  Input: debug-input-$ITERATION.txt" >&2
             echo "  Response: response-$ITERATION.txt" >&2
             
-            # Don't clean up on error so user can inspect
-            trap - EXIT
-            
             # Offer fallback option
             echo "" >&2
             echo "Would you like to:" >&2
@@ -299,6 +335,8 @@ Current remaining changes:"
             case "$choice" in
                 1)
                     echo "Retrying with first 10 files only..." >&2
+                    # Don't clean up temp dir on retry
+                    trap - EXIT
                     # Limit to first 10 untracked files
                     git status --porcelain | head -10 | cut -c4- | while read -r file; do
                         git add "$file" 2>/dev/null || true
@@ -309,8 +347,11 @@ Current remaining changes:"
                     echo "Staging all remaining changes..." >&2
                     git add -A
                     git-snapshotc
+                    exit 0
                     ;;
                 *)
+                    # Don't clean up on exit so user can inspect
+                    trap - EXIT
                     exit 1
                     ;;
             esac
@@ -371,30 +412,67 @@ Current remaining changes:"
         if [ -z "$answer" ] || [ "$answer" = "Y" ] || [ "$answer" = "y" ]; then
             echo -e "\n🔧 Applying patch..."
             
-            # Reset to clean state (unstage everything)
+            # First, save the current state of ALL changes
+            FULL_DIFF="$TEMP_DIR/full-diff-$ITERATION.patch"
+            git add -A
+            git diff --cached --no-color -U10 > "$FULL_DIFF"
+            
+            # Log the size of the full diff
+            echo "  Full diff size: $(wc -l < "$FULL_DIFF") lines, $(wc -c < "$FULL_DIFF") bytes"
+            
             git reset HEAD -- . >/dev/null 2>&1
             
-            # Apply the patch
-            if git apply --check "$PATCH_FILE" 2>/dev/null; then
-                # Apply with whitespace fix, capture warnings
-                APPLY_OUTPUT=$(git apply --whitespace=fix "$PATCH_FILE" 2>&1)
-                WARNING_COUNT=$(echo "$APPLY_OUTPUT" | grep -c "warning:" || true)
-                if [ $WARNING_COUNT -gt 0 ]; then
-                    echo "  (Fixed $WARNING_COUNT whitespace issues)"
+            # Check if this is dealing with untracked files
+            UNTRACKED_IN_PATCH=false
+            PATCH_FILES=""
+            while IFS= read -r line; do
+                if [[ "$line" =~ ^diff\ --git\ a/(.+)\ b/(.+)$ ]]; then
+                    FILE_PATH="${BASH_REMATCH[2]}"
+                    PATCH_FILES="${PATCH_FILES}${FILE_PATH}"$'\n'
+                    # Check if this file is untracked
+                    if git status --porcelain | grep -q "^?? ${FILE_PATH}$"; then
+                        UNTRACKED_IN_PATCH=true
+                    fi
                 fi
+            done < "$PATCH_FILE"
+            
+            # Different handling for untracked vs modified files
+            if [ "$UNTRACKED_IN_PATCH" = true ]; then
+                echo "  Detected untracked files in patch, using direct staging..."
                 
-                # Check for new executable files in the patch and set permissions
-                grep -B1 "^new file mode 100755" "$PATCH_FILE" | grep "^diff --git" | while read -r line; do
-                    if [[ "$line" =~ b/([^[:space:]]+)$ ]]; then
-                        file="${BASH_REMATCH[1]}"
-                        if [ -f "$file" ]; then
+                # For untracked files, just add them directly
+                echo "$PATCH_FILES" | sort -u | grep -v '^$' | while IFS= read -r file; do
+                    if [ -n "$file" ] && [ -e "$file" ]; then
+                        echo "  Adding: $file"
+                        git add "$file"
+                        
+                        # Check for executable permissions in the patch
+                        if grep -A1 "^diff --git.*b/${file}$" "$PATCH_FILE" | grep -q "^new file mode 100755"; then
                             chmod +x "$file"
+                            echo "  Made executable: $file"
                         fi
                     fi
                 done
-                
-                # Stage all changes from the patch
-                git add -A
+            else
+                # For modified files, use git apply
+                if git apply --check "$PATCH_FILE" 2>/dev/null; then
+                    # Apply with whitespace fix, capture warnings
+                    APPLY_OUTPUT=$(git apply --whitespace=fix "$PATCH_FILE" 2>&1)
+                    WARNING_COUNT=$(echo "$APPLY_OUTPUT" | grep -c "warning:" || true)
+                    if [ $WARNING_COUNT -gt 0 ]; then
+                        echo "  (Fixed $WARNING_COUNT whitespace issues)"
+                    fi
+                    
+                    # Stage all changes from the patch
+                    git add -A
+                else
+                    echo "⚠️  Error: Failed to apply patch" >&2
+                    git apply --check "$PATCH_FILE" 2>&1 | sed 's/^/  /'
+                    PATCH_FAILED=true
+                fi
+            fi
+            
+            if [ "${PATCH_FAILED:-false}" != true ]; then
                 
                 # Show what's staged
                 echo -e "\nStaged changes:"
@@ -407,10 +485,96 @@ Current remaining changes:"
                 # Record success in planning history
                 echo "OUTCOME: Committed - $DESCRIPTION" >> "$PLANNING_HISTORY"
                 echo "" >> "$PLANNING_HISTORY"
+                
+                # Create a reverse patch of what we just committed
+                REVERSE_PATCH="$TEMP_DIR/reverse-$ITERATION.patch"
+                git diff HEAD~1 HEAD --no-color > "$REVERSE_PATCH"
+                
+                # Apply reverse patch to remove committed changes from full diff
+                # This creates a new diff with only remaining changes
+                REMAINING_DIFF="$TEMP_DIR/remaining-$ITERATION.patch"
+                cp "$FULL_DIFF" "$REMAINING_DIFF"
+                
+                # Try to apply the reverse patch to the remaining diff
+                # This removes the committed changes from our saved state
+                if [ -s "$REVERSE_PATCH" ]; then
+                    echo "  Reverse patch size: $(wc -l < "$REVERSE_PATCH") lines"
+                    
+                    # Create a temporary directory for patch operations
+                    PATCH_WORK_DIR="$TEMP_DIR/patch-work-$ITERATION"
+                    mkdir -p "$PATCH_WORK_DIR"
+                    
+                    # Apply the full diff to the work directory
+                    echo "  Applying full diff to temp directory..."
+                    if (cd "$PATCH_WORK_DIR" && git init -q && git apply --whitespace=fix "$FULL_DIFF" 2>"$TEMP_DIR/apply-full-error.log"); then
+                        echo "  ✓ Full diff applied successfully"
+                    else
+                        echo "  ⚠️  Warning: Failed to apply full diff cleanly"
+                        cat "$TEMP_DIR/apply-full-error.log" | sed 's/^/    /'
+                    fi
+                    
+                    # Apply the reverse patch
+                    echo "  Applying reverse patch..."
+                    if (cd "$PATCH_WORK_DIR" && git apply -R --whitespace=fix "$REVERSE_PATCH" 2>"$TEMP_DIR/apply-reverse-error.log"); then
+                        echo "  ✓ Reverse patch applied successfully"
+                    else
+                        echo "  ⚠️  Warning: Failed to apply reverse patch cleanly"
+                        cat "$TEMP_DIR/apply-reverse-error.log" | sed 's/^/    /'
+                    fi
+                    
+                    # Generate the remaining diff
+                    (cd "$PATCH_WORK_DIR" && git add -A && git diff --cached --no-color > "$REMAINING_DIFF")
+                    echo "  Remaining diff size: $(wc -l < "$REMAINING_DIFF") lines"
+                    
+                    # Clean up work directory
+                    rm -rf "$PATCH_WORK_DIR"
+                fi
+                
+                # Restore remaining changes
+                if [ -s "$REMAINING_DIFF" ]; then
+                    echo -e "\n🔄 Restoring remaining changes..."
+                    if git apply --whitespace=fix "$REMAINING_DIFF" 2>"$TEMP_DIR/restore-error.log"; then
+                        echo "  ✓ Successfully restored $(wc -l < "$REMAINING_DIFF") lines of changes"
+                    else
+                        # Fallback: try with --3way for better conflict resolution
+                        echo "  Trying 3-way merge..."
+                        if git apply --3way --whitespace=fix "$REMAINING_DIFF" 2>"$TEMP_DIR/restore-3way-error.log"; then
+                            echo "  ✓ Successfully restored changes using 3-way merge"
+                        else
+                            echo "  ⚠️  Warning: Some changes couldn't be restored cleanly"
+                            echo "  Error details:"
+                            cat "$TEMP_DIR/restore-3way-error.log" | sed 's/^/    /'
+                            echo ""
+                            echo "  Debug files saved in: $TEMP_DIR"
+                            echo "    - full-diff-$ITERATION.patch (original state)"
+                            echo "    - reverse-$ITERATION.patch (what was committed)"
+                            echo "    - remaining-$ITERATION.patch (what should be restored)"
+                        fi
+                    fi
+                else
+                    echo "  No remaining changes to restore"
+                fi
             else
                 echo "⚠️  Error: Failed to apply patch" >&2
                 echo "Patch validation errors:"
-                git apply --check "$PATCH_FILE" 2>&1 | sed 's/^/  /'
+                echo "  Patch failed or files could not be processed"
+                
+                # Show current git status for context
+                echo -e "\nCurrent git status:"
+                git status --porcelain | head -20 | sed 's/^/  /'
+                
+                # Check if files in patch already exist
+                echo -e "\nChecking patch files:"
+                grep -E "^diff --git" "$PATCH_FILE" | while IFS= read -r line; do
+                    if [[ "$line" =~ [[:space:]]b/(.+)$ ]]; then
+                        file="${BASH_REMATCH[1]}"
+                        if [ -e "$file" ]; then
+                            echo "  $file - exists ($(file -b "$file" 2>/dev/null || echo "unknown type"))"
+                        else
+                            echo "  $file - does not exist"
+                        fi
+                    fi
+                done
                 
                 # Show the patch content for debugging
                 echo -e "\nPatch content (first 50 lines):"
@@ -419,6 +583,10 @@ Current remaining changes:"
                 # Record failure in planning history
                 echo "OUTCOME: Failed to apply patch - $DESCRIPTION" >> "$PLANNING_HISTORY"
                 echo "" >> "$PLANNING_HISTORY"
+                
+                echo -e "\nDebug files saved in: $TEMP_DIR"
+                echo "  - patch-$ITERATION.diff (the patch that failed)"
+                echo "  - full-diff-$ITERATION.patch (current state)"
                 
                 echo -e "\nTrying next iteration with remaining changes..."
             fi
