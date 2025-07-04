@@ -1,8 +1,8 @@
 # Claude Code Deployment Overview
 
-Claude Code can be deployed in multiple environments to suit different
-organizational needs and security requirements. This guide provides an
-overview of the available deployment options.
+Claude Code offers flexible deployment options for various organizational
+needs, from simple API access to enterprise-grade configurations. This guide
+helps you choose the right deployment strategy for your requirements.
 
 ## Deployment Options
 
@@ -17,6 +17,8 @@ For organizations with specific security requirements:
 
 1. **Direct API Access** - Standard Anthropic API deployment
 2. **Private Cloud** - Isolated deployment options
+3. **Corporate Proxy** - Deploy behind corporate firewalls
+4. **LLM Gateway** - Centralized model management
 
 ## Choosing a Deployment Method
 
@@ -62,7 +64,8 @@ All deployment methods support:
 
 Choose your deployment method and follow the specific guide:
 - Amazon Bedrock Guide
-- Google Vertex AI Guide
 - Direct API Setup
+- Corporate Proxy Setup
+- LLM Gateway Configuration
 
 For questions, consult the troubleshooting guide.
