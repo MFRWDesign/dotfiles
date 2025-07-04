@@ -80,6 +80,7 @@ brew 'nodenv' # Manage multiple NodeJS versions
 brew 'openssl' # Cryptography and SSL/TLS Toolkit
 brew 'p7zip' # 7-Zip (high compression file archiver) implementation
 brew 'pandoc' # Swiss-army knife of markup format conversion TODO: Look into this tool more
+brew 'patchutils' # Utilities for manipulating patch files
 brew 'pango' # Framework for layout and rendering of i18n text
 brew 'pcre' # Perl compatible regular expressions library
 brew 'pinentry-mac'
