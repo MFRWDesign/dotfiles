@@ -567,6 +567,405 @@ for file in *.js; do
 done
 ```
 
+## Interdiff Tool Documentation
+
+### Overview
+Interdiff (from patchutils) creates a unified format diff that expresses the difference between two diffs. It's particularly useful for patch-based workflows and comparing patch iterations.
+
+### Key Concepts
+
+#### What Interdiff Does
+- Shows the difference between two patches (not just two commits)
+- Tells you whether lines removed in the second patch were added in the first patch
+- Identifies whether lines added in the second patch were removed in the first patch
+- Provides information that simple diff between commits cannot
+
+#### Requirements and Limitations
+- Both diffs must be relative to the same files
+- Requires at least 3 lines of context for best results
+- Has stricter input format requirements than patch(1)
+- Not guaranteed to be reversible in all cases
+- May fail when insufficient information exists to produce proper interdiff
+
+### Common Usage Patterns
+
+#### 1. Basic Interdiff
+```bash
+# Compare two patches
+interdiff old.patch new.patch > changes.patch
+
+# With compression support
+interdiff -z v1.patch.gz v2.patch.gz
+```
+
+#### 2. Reversing a Patch
+```bash
+# Use /dev/null as second argument
+interdiff patch.diff /dev/null > reversed.patch
+
+# With -q to prevent "reverted:" line insertion
+interdiff -q patch.diff /dev/null > reversed.patch
+```
+
+#### 3. Reducing Context
+```bash
+# Reduce to 1 line of context
+interdiff -U1 /dev/null patchfile
+```
+
+#### 4. Filtering Specific Files
+```bash
+# Extract changes for specific file then reverse
+filterdiff -i file.c patchfile | interdiff /dev/stdin /dev/null
+```
+
+### Important Caveats
+
+1. **Patch Subtraction**: While `interdiff patch1 patch2` shows differences, it does NOT cleanly subtract patch1 from patch2 for applying remaining changes. The output may not be a valid applicable patch.
+
+2. **Reversal Limitations**: `interdiff patch /dev/null` may not always produce valid reversed patches. Known issues exist with this approach.
+
+3. **Alternative for Reversal**: Often more reliable to use `patch -R` instead:
+   ```bash
+   patch -R < original.patch
+   ```
+
+4. **Git Integration**: For git workflows, consider using `git range-diff` (Git 2.19+) which provides similar functionality with better git integration.
+
+### Git Smart Commit Workflow Implications
+
+For our git-snapc-smrt tools:
+- **Don't rely on interdiff for patch subtraction**: The output may not apply cleanly
+- **Consider git range-diff**: More reliable for git-based workflows
+- **Track file states explicitly**: Untracked vs modified vs deleted files need different handling
+- **Use git's built-in tools**: `git apply --cached` for staging specific patches
+- **Alternative approach**: Instead of patch subtraction, consider:
+  1. Apply first commit's changes
+  2. Reset working directory
+  3. Reapply full diff
+  4. Stage only non-committed changes
+
+### Debugging Interdiff Issues
+
+```bash
+# Check if patches have common base
+git diff --stat patch1 patch2
+
+# Validate patch format
+recountdiff patch.diff > cleaned.diff
+
+# Test if interdiff output is valid
+interdiff old.patch new.patch | patch --dry-run
+```
+
+## Git Range-Diff Documentation
+
+### Overview
+Git range-diff (added in Git 2.19) compares two commit ranges, typically two versions of a patch series. It shows how commits have evolved between iterations, making it invaluable for patch-based workflows and code review.
+
+### Key Concepts
+
+#### What Git Range-Diff Does
+- Compares two versions of a patch series or commit ranges
+- Finds corresponding commits between ranges based on similarity
+- Shows which commits were added, removed, modified, or unchanged
+- Provides a "diff of diffs" to see how patches evolved
+- Useful after rebases to verify no unintended changes were introduced
+
+#### How It Works
+- Creates a cost matrix between commits in both ranges
+- Uses the Jonker-Volgenant algorithm to find optimal matching
+- Matches commits when their patch differences are small relative to size
+- Shows output in order of the second commit range
+
+### Common Usage Patterns
+
+#### 1. Basic Comparison
+```bash
+# Compare two branches
+git range-diff origin/v1..origin/v2
+
+# Compare before/after rebase
+git range-diff @{u} @{1} @
+
+# Three-dot syntax (compares divergence from common base)
+git range-diff main...feature-v1 main...feature-v2
+```
+
+#### 2. After Resolving Conflicts
+```bash
+# After a rebase with conflicts
+git range-diff @{1}...HEAD@{1} @{1}...HEAD
+
+# Verify changes after cherry-pick
+git range-diff topic@{1} topic
+```
+
+#### 3. With Format-Patch
+```bash
+# Include range-diff in patch cover letter
+git format-patch --cover-letter --range-diff=feature/v1 -3 feature/v2
+
+# For single patch with commentary
+git format-patch --range-diff=@{u} -1
+```
+
+#### 4. Filtering Output
+```bash
+# Show only commits missing from first range
+git range-diff --left-only old new
+
+# Show only commits missing from second range  
+git range-diff --right-only old new
+
+# Adjust matching sensitivity (default 60%)
+git range-diff --creation-factor=40 old new
+```
+
+### Understanding the Output
+
+```
+1:  c0debee = 2:  cab005e Add a helpful message
+2:  f00dbal ! 3:  decafe1 Describe a bug
+    @@ -1,3 +1,3 @@
+     -TODO: Describe a bug
+     +Describe a bug
+3:  bedead < -:  ------- Remove debug code
+-:  ------- > 1:  0ddba11 Add new feature
+```
+
+- `=` means commits are identical
+- `!` means commits differ
+- `<` means commit was removed
+- `>` means commit was added
+- Numbers show position in old/new ranges
+
+### Important Limitations
+
+1. **Output Not Machine-Readable**: Range-diff output is human-readable porcelain, not stable across Git versions
+
+2. **No Apply Equivalent**: Unlike patches, range-diff output cannot be applied with git-apply
+
+3. **Not for Patch Extraction**: Range-diff shows differences between patch series, not for creating applicable patches
+
+4. **Performance**: O(n*m) for diff generation plus O(n³) for matching algorithm
+
+### Git Smart Commit Workflow Implications
+
+For our git-snapc-smrt tools:
+- **Range-diff is for comparison only**: Cannot extract or apply patches from its output
+- **Use git format-patch**: For creating applicable patch files
+- **Use git apply**: For applying patches with index/working tree control
+- **Track commit relationships**: Helpful for understanding patch evolution
+- **Better than interdiff for Git**: Native Git tool with better integration
+
+### Practical Workflow for Partial Commits
+
+Instead of trying to subtract patches:
+
+```bash
+# 1. Create patches for each logical commit
+git format-patch -1 <commit>
+
+# 2. Apply patches selectively
+git apply --cached <patch>  # Stage to index only
+git apply --index <patch>   # Apply to both index and working tree
+
+# 3. For partial file changes
+git add -p  # Interactive staging
+git reset -p  # Unstage selectively
+
+# 4. View what will be committed
+git diff --cached  # Shows staged changes only
+```
+
+### Alternative Approaches for Multi-Commit Workflows
+
+1. **Interactive Rebase**: `git rebase -i` to split commits
+2. **Git Worktree**: Create temporary worktrees for complex operations
+3. **Stash with Index**: `git stash -k` to preserve staged changes
+4. **Cherry-pick Ranges**: `git cherry-pick A..B` for selective application
+
+## Git Format-Patch and Apply Documentation
+
+### Overview
+Git format-patch creates patch files from commits, while git apply applies patches to the working directory and/or index. Together, they enable powerful workflows for managing complex changes across multiple commits.
+
+### Key Concepts
+
+#### Format-Patch Basics
+- Creates one .patch file per commit by default
+- Preserves commit metadata (author, date, message)
+- Output is email-ready format for git send-email
+- Can combine multiple commits into single patch file with `--stdout`
+
+#### Git Apply Options
+- **No flags**: Applies patch to working directory only
+- **--cached**: Applies patch to index/staging area only
+- **--index**: Applies patch to both working directory and index
+- **--3way**: Attempts 3-way merge if patch doesn't apply cleanly
+
+### Creating Patches
+
+#### From Commits
+```bash
+# Last N commits
+git format-patch -3  # Creates 3 separate .patch files
+
+# Specific commit range
+git format-patch origin/main..HEAD
+
+# Single commit
+git format-patch -1 <commit-sha>
+
+# Multiple commits in one file
+git format-patch -3 --stdout > combined.patch
+```
+
+#### From Working Directory/Staging
+```bash
+# Unstaged changes only
+git diff > unstaged.patch
+
+# Staged changes only
+git diff --cached > staged.patch
+
+# All changes (staged + unstaged)
+git diff HEAD > all-changes.patch
+
+# Binary files included
+git diff --binary > changes-with-binary.patch
+```
+
+### Applying Patches
+
+#### Basic Application
+```bash
+# Apply to working directory
+git apply patch.diff
+
+# Apply to staging area only
+git apply --cached patch.diff
+
+# Apply to both working directory and staging
+git apply --index patch.diff
+
+# Check if patch applies cleanly (dry run)
+git apply --check patch.diff
+```
+
+#### Advanced Options
+```bash
+# Ignore whitespace differences
+git apply --whitespace=fix patch.diff
+
+# Apply with 3-way merge
+git apply --3way patch.diff
+
+# Reverse a patch
+git apply --reverse patch.diff
+```
+
+### Multi-Commit Workflow Strategy
+
+For our git-snapc-smrt tools, here's a viable approach:
+
+#### 1. Capture Current State
+```bash
+# Save full diff
+git diff HEAD > full-changes.patch
+
+# Save list of untracked files
+git ls-files --others --exclude-standard > untracked-files.txt
+```
+
+#### 2. Claude Analysis Phase
+```bash
+# Send to Claude for analysis
+COMMIT_PLAN=$(git diff HEAD | claude -p "Analyze and create commit plan" \
+  --output-format json --max-turns 5)
+```
+
+#### 3. Create Individual Commits
+```bash
+# For each commit in plan:
+# a. Reset to clean state
+git reset --hard HEAD
+
+# b. Apply specific changes
+git apply --cached <specific-changes.patch>
+
+# c. Handle untracked files
+while read file; do
+  if [[ "$file" in commit ]]; then
+    cp "$BACKUP_DIR/$file" "$file"
+    git add "$file"
+  fi
+done < files-for-this-commit.txt
+
+# d. Create commit
+git commit -m "$COMMIT_MESSAGE"
+```
+
+### Limitations and Workarounds
+
+#### Partial File Changes
+Git format-patch/apply work at file level, not line level. For partial file commits:
+
+1. **Use git add -p**: Interactive staging (requires user interaction)
+2. **Create custom patches**: Extract specific hunks programmatically
+3. **Multiple working directories**: Use git worktree for complex operations
+
+#### Patch Dependencies
+When changes in later commits depend on earlier ones:
+- Apply patches sequentially
+- Use `--3way` for better conflict resolution
+- Track file states between commits
+
+### Practical Implementation Pattern
+
+```bash
+#!/bin/bash
+# Simplified multi-commit workflow
+
+# 1. Backup current state
+BACKUP_DIR=$(mktemp -d)
+cp -r . "$BACKUP_DIR"
+
+# 2. Get full diff
+FULL_DIFF=$(git diff HEAD)
+
+# 3. For each logical commit:
+for commit in "${COMMITS[@]}"; do
+  # Reset to base state
+  git reset --hard HEAD
+  
+  # Restore files needed for this commit
+  for file in "${commit_files[@]}"; do
+    cp "$BACKUP_DIR/$file" "$file"
+  done
+  
+  # Stage and commit
+  git add "${commit_files[@]}"
+  git commit -m "$commit_message"
+done
+```
+
+### Alternative Approaches
+
+1. **Git Worktree**: Create temporary worktrees for each commit
+2. **Interactive Rebase**: Post-process with `git rebase -i` to split
+3. **Stash Management**: Use `git stash -p` for partial stashing
+4. **Index Manipulation**: Direct index manipulation with `git update-index`
+
+### Best Practices for Automation
+
+1. **Always backup**: Save working directory state before operations
+2. **Validate patches**: Use `--check` before applying
+3. **Handle binaries**: Include `--binary` when needed
+4. **Track dependencies**: Maintain order when commits depend on each other
+5. **Error recovery**: Implement rollback mechanisms
+
 ## Notes on Missing Components
 - iTerm2 configurations are not present in this repository
 - No explicit test or validation commands exist
