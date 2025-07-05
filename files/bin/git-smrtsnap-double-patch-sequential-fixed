@@ -554,6 +554,7 @@ if [ -s "$TEMP_DIR/patch2.diff" ]; then
 fi
 
 # Restore new files for second commit from stash (without popping)
+# First check if Claude provided a list
 if [ -n "$COMMIT2_NEW_FILES" ]; then
     echo "Restoring new files for second change (leaving unstaged): $COMMIT2_NEW_FILES"
     IFS=',' read -ra NEW_FILES_ARRAY <<< "$COMMIT2_NEW_FILES"
@@ -571,6 +572,22 @@ if [ -n "$COMMIT2_NEW_FILES" ]; then
             fi
         fi
     done
+# If Claude didn't list new files but we know there are some remaining, restore them all
+elif [ -s "$TEMP_DIR/remaining-untracked.txt" ]; then
+    echo "Restoring ALL remaining new files (Claude didn't specify which ones):"
+    while IFS= read -r file; do
+        if [ -n "$file" ] && [ -n "$STASH_UNTRACKED_COMMIT" ]; then
+            # Create directory if needed
+            dir=$(dirname "$file")
+            [ "$dir" != "." ] && mkdir -p "$dir"
+            
+            if git show "$STASH_UNTRACKED_COMMIT:$file" > "$file" 2>/dev/null; then
+                echo "  Restored: $file"
+            else
+                echo "  Warning: Could not restore $file from stash"
+            fi
+        fi
+    done < "$TEMP_DIR/remaining-untracked.txt"
 fi
 
 # Don't stage anything - leave patch 2 changes in working directory
