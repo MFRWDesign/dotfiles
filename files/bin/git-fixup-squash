@@ -1,0 +1,36 @@
+#!/bin/bash
+set -euo pipefail
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo "Error: Not in a git repository"
+    exit 1
+fi
+
+# Check if there are staged changes
+if ! git diff --cached --quiet; then
+    # Create fixup commit for the most recent commit
+    git commit --fixup=HEAD
+    
+    # Check if there are unstaged changes
+    STASHED=false
+    if ! git diff --quiet; then
+        echo "Stashing unstaged changes..."
+        git stash push -m "git-fixup-squash temporary stash"
+        STASHED=true
+    fi
+    
+    # Run interactive rebase with autosquash to apply the fixup
+    GIT_SEQUENCE_EDITOR=: git rebase -i --autosquash HEAD~2
+    
+    # If we stashed, apply the stash
+    if [ "$STASHED" = true ]; then
+        echo "Applying stashed changes..."
+        git stash apply
+        # Remove the stash entry since we successfully applied it
+        git stash drop
+    fi
+else
+    echo "Error: No staged changes to create fixup commit"
+    exit 1
+fi

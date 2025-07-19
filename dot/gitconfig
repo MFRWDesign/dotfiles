@@ -19,6 +19,7 @@
 	smrtsnap-partial = !git-smrtsnap-partial
 	smrtsnap-iter = !git-smrtsnap-iterative
 	smrtsnap-auto = !git-smrtsnap-auto
+	fixup-squash = !git-fixup-squash
 [push]
 	default = simple
 [user]
