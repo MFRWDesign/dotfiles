@@ -133,3 +133,4 @@ if [ $TOTAL_MINS -gt 0 ]; then
     echo -e "\n⏱️  Total time: ${TOTAL_MINS}m ${TOTAL_SECS}s"
 else
     echo -e "\n⏱️  Total time: ${TOTAL_ELAPSED}s"
+fi

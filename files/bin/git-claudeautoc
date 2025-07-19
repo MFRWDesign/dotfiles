@@ -60,3 +60,4 @@ else
         echo "Commit cancelled."
         exit 0
     fi
+fi
