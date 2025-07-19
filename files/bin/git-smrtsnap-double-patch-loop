@@ -1,0 +1,95 @@
+#!/bin/bash
+#
+# git-smrtsnap-double-patch-loop - AI-powered tool that creates multiple logical commits
+# by looping git-smrtsnap-double-patch until all changes are committed
+#
+set -euo pipefail
+
+# Colors for output
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo -e "${CYAN}🤖 git-smrtsnap-double-patch-loop - Multi-commit intelligent creation${NC}"
+
+# Check if claude is available
+if ! command -v claude &> /dev/null; then
+    echo -e "${RED}Error: 'claude' command not found. Please install Claude CLI.${NC}" >&2
+    exit 1
+fi
+
+# Check if git-smrtsnap-double-patch is available
+if ! command -v git-smrtsnap-double-patch &> /dev/null; then
+    echo -e "${RED}Error: 'git-smrtsnap-double-patch' command not found.${NC}" >&2
+    exit 1
+fi
+
+# Check if in a git repository
+if ! git rev-parse --git-dir &> /dev/null; then
+    echo -e "${RED}Error: Not in a git repository${NC}" >&2
+    exit 1
+fi
+
+# Check for changes
+if [ -z "$(git status --porcelain)" ]; then
+    echo -e "${YELLOW}No changes to commit${NC}"
+    exit 0
+fi
+
+# Initialize counter for commits
+COMMIT_COUNT=0
+MAX_COMMITS=10  # Safety limit to prevent infinite loops
+
+echo -e "${CYAN}📊 Starting multi-commit analysis using double-patch strategy...${NC}"
+
+# Main loop - continue until no more changes remain
+while [ "$(git status --porcelain | wc -l)" -gt 0 ] && [ $COMMIT_COUNT -lt $MAX_COMMITS ]; do
+    ((COMMIT_COUNT++))
+    
+    echo -e "\n${CYAN}🔄 Iteration $COMMIT_COUNT: Running git-smrtsnap-double-patch...${NC}"
+    
+    # Check if we have enough changes for double-patch (need at least 2 logical groups)
+    CHANGE_COUNT=$(git status --porcelain | wc -l)
+    echo "Changes remaining: $CHANGE_COUNT files"
+    
+    # Run git-smrtsnap-double-patch
+    if ! git-smrtsnap-double-patch; then
+        echo -e "${RED}❌ git-smrtsnap-double-patch failed on iteration $COMMIT_COUNT${NC}"
+        exit 1
+    fi
+    
+    # Check if there are any remaining changes
+    REMAINING_CHANGES=$(git status --porcelain | wc -l)
+    if [ "$REMAINING_CHANGES" -eq 0 ]; then
+        echo -e "\n${GREEN}🎉 All changes committed! Process completed after $COMMIT_COUNT iterations.${NC}"
+        break
+    else
+        echo -e "\n${CYAN}📊 Remaining changes: $REMAINING_CHANGES files${NC}"
+        echo "Continuing to next iteration..."
+    fi
+    
+    # Brief pause between iterations
+    sleep 2
+done
+
+# Final summary
+if [ $COMMIT_COUNT -eq $MAX_COMMITS ]; then
+    echo -e "\n${YELLOW}⚠️  Reached maximum iteration limit ($MAX_COMMITS). Some changes may remain uncommitted.${NC}"
+fi
+
+echo -e "\n${GREEN}🎉 Loop completed after $COMMIT_COUNT iterations.${NC}"
+
+# Show recent commits created
+echo -e "\n${GREEN}Recent commits created:${NC}"
+git --no-pager log --oneline -n $((COMMIT_COUNT * 2))
+
+# Show final status
+FINAL_CHANGES=$(git status --porcelain | wc -l)
+if [ "$FINAL_CHANGES" -gt 0 ]; then
+    echo -e "\n${CYAN}Remaining uncommitted changes:${NC}"
+    git status --short
+else
+    echo -e "\n${GREEN}✅ All changes have been committed!${NC}"
+fi
