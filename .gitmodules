@@ -1,0 +1,3 @@
+[submodule "claude-code-devcontainer-temp"]
+	path = claude-code-devcontainer-temp
+	url = https://github.com/anthropics/claude-code.git

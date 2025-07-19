@@ -1,0 +1,546 @@
+[
+  {
+    "name": "anthropics/claude-code",
+    "type": "github",
+    "is_official": true,
+    "scores": {
+      "freshness": 10,
+      "popularity": 10,
+      "engagement": 10,
+      "uniqueness": 4,
+      "documentation": 10,
+      "authority": 10,
+      "total": 54
+    },
+    "url": "https://github.com/anthropics/claude-code",
+    "stars": 18538
+  },
+  {
+    "name": "modelcontextprotocol/servers",
+    "type": "github",
+    "is_official": true,
+    "scores": {
+      "freshness": 10,
+      "popularity": 10,
+      "engagement": 10,
+      "uniqueness": 6,
+      "documentation": 10,
+      "authority": 8,
+      "total": 54
+    },
+    "url": "https://github.com/modelcontextprotocol/servers",
+    "stars": 58779
+  },
+  {
+    "name": "anthropics/claude-code-action",
+    "type": "github",
+    "is_official": true,
+    "scores": {
+      "freshness": 10,
+      "popularity": 10,
+      "engagement": 10,
+      "uniqueness": 2,
+      "documentation": 10,
+      "authority": 10,
+      "total": 52
+    },
+    "url": "https://github.com/anthropics/claude-code-action",
+    "stars": 1659
+  },
+  {
+    "name": "anthropics/claude-code/.devcontainer",
+    "type": "github_subdir",
+    "is_official": true,
+    "scores": {
+      "freshness": 10,
+      "popularity": 10,
+      "engagement": 8,
+      "uniqueness": 4,
+      "documentation": 10,
+      "authority": 10,
+      "total": 52
+    },
+    "url": "",
+    "stars": null
+  },
+  {
+    "name": "Anthropic Engineering Blog - Best Practices",
+    "type": "blog",
+    "is_official": true,
+    "scores": {
+      "freshness": 10,
+      "popularity": 10,
+      "engagement": 8,
+      "uniqueness": 2,
+      "documentation": 10,
+      "authority": 10,
+      "total": 50
+    },
+    "url": "https://www.anthropic.com/engineering/claude-code-best-practices",
+    "stars": null
+  },
+  {
+    "name": "Anthropic Prompt Improver",
+    "type": "tool",
+    "is_official": true,
+    "scores": {
+      "freshness": 8,
+      "popularity": 10,
+      "engagement": 8,
+      "uniqueness": 4,
+      "documentation": 10,
+      "authority": 10,
+      "total": 50
+    },
+    "url": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/prompt-improver",
+    "stars": null
+  },
+  {
+    "name": "Claude 3.7 Sonnet Announcement",
+    "type": "announcement",
+    "is_official": true,
+    "scores": {
+      "freshness": 10,
+      "popularity": 10,
+      "engagement": 8,
+      "uniqueness": 2,
+      "documentation": 10,
+      "authority": 8,
+      "total": 48
+    },
+    "url": "https://www.anthropic.com/news/claude-3-7-sonnet",
+    "stars": null
+  },
+  {
+    "name": "Claude Code Documentation",
+    "type": "docs",
+    "is_official": true,
+    "scores": {
+      "freshness": 8,
+      "popularity": 10,
+      "engagement": 8,
+      "uniqueness": 2,
+      "documentation": 10,
+      "authority": 8,
+      "total": 46
+    },
+    "url": "https://claude.ai/code",
+    "stars": null
+  },
+  {
+    "name": "hesreallyhim/awesome-claude-code",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 9,
+      "engagement": 8,
+      "uniqueness": 4,
+      "documentation": 7,
+      "authority": 0,
+      "total": 38
+    },
+    "url": "https://github.com/hesreallyhim/awesome-claude-code",
+    "stars": 3482
+  },
+  {
+    "name": "ruvnet/claude-flow",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 7,
+      "engagement": 8,
+      "uniqueness": 6,
+      "documentation": 2,
+      "authority": 0,
+      "total": 33
+    },
+    "url": "https://github.com/ruvnet/claude-flow",
+    "stars": 1713
+  },
+  {
+    "name": "zebbern/claude-code-guide",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 7,
+      "engagement": 4,
+      "uniqueness": 2,
+      "documentation": 8,
+      "authority": 0,
+      "total": 31
+    },
+    "url": "https://github.com/zebbern/claude-code-guide",
+    "stars": 1110
+  },
+  {
+    "name": "steipete/agent-rules",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 9,
+      "engagement": 6,
+      "uniqueness": 2,
+      "documentation": 2,
+      "authority": 0,
+      "total": 29
+    },
+    "url": "https://github.com/steipete/agent-rules",
+    "stars": 2619
+  },
+  {
+    "name": "rizethereum/claude-code-requirements-builder",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 7,
+      "engagement": 6,
+      "uniqueness": 0,
+      "documentation": 6,
+      "authority": 0,
+      "total": 29
+    },
+    "url": "https://github.com/rizethereum/claude-code-requirements-builder",
+    "stars": 1139
+  },
+  {
+    "name": "Maciek-roboblog/Claude-Code-Usage-Monitor",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 9,
+      "engagement": 6,
+      "uniqueness": 2,
+      "documentation": 2,
+      "authority": 0,
+      "total": 29
+    },
+    "url": "https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor",
+    "stars": 2525
+  },
+  {
+    "name": "iannuttall/claude-sessions",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 5,
+      "engagement": 4,
+      "uniqueness": 0,
+      "documentation": 8,
+      "authority": 0,
+      "total": 27
+    },
+    "url": "https://github.com/iannuttall/claude-sessions",
+    "stars": 622
+  },
+  {
+    "name": "qdhenry/Claude-Command-Suite",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 3,
+      "engagement": 2,
+      "uniqueness": 4,
+      "documentation": 7,
+      "authority": 0,
+      "total": 26
+    },
+    "url": "https://github.com/qdhenry/Claude-Command-Suite",
+    "stars": 233
+  },
+  {
+    "name": "joshuayoes/ios-simulator-mcp",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 5,
+      "engagement": 2,
+      "uniqueness": 4,
+      "documentation": 2,
+      "authority": 0,
+      "total": 23
+    },
+    "url": "https://github.com/joshuayoes/ios-simulator-mcp",
+    "stars": 683
+  },
+  {
+    "name": "disler/claude-code-hooks-mastery",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 3,
+      "engagement": 2,
+      "uniqueness": 0,
+      "documentation": 6,
+      "authority": 0,
+      "total": 21
+    },
+    "url": "https://github.com/disler/claude-code-hooks-mastery",
+    "stars": 175
+  },
+  {
+    "name": "steipete/claude-code-mcp",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 3,
+      "engagement": 2,
+      "uniqueness": 4,
+      "documentation": 2,
+      "authority": 0,
+      "total": 21
+    },
+    "url": "https://github.com/steipete/claude-code-mcp",
+    "stars": 480
+  },
+  {
+    "name": "cassler/awesome-claude-code-setup",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 1,
+      "engagement": 1,
+      "uniqueness": 2,
+      "documentation": 6,
+      "authority": 0,
+      "total": 20
+    },
+    "url": "https://github.com/cassler/awesome-claude-code-setup",
+    "stars": 29
+  },
+  {
+    "name": "Medium: Claude Code Hooks Automation",
+    "type": "article",
+    "is_official": false,
+    "scores": {
+      "freshness": 8,
+      "popularity": 3,
+      "engagement": 2,
+      "uniqueness": 2,
+      "documentation": 5,
+      "authority": 0,
+      "total": 20
+    },
+    "url": "https://medium.com/@joe.njenga/use-claude-code-hooks-newest-feature-to-fully-automate-your-workflow-341b9400cfbe",
+    "stars": null
+  },
+  {
+    "name": "undeadpickle/claude-code-mcpinstall",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 3,
+      "engagement": 1,
+      "uniqueness": 2,
+      "documentation": 2,
+      "authority": 0,
+      "total": 18
+    },
+    "url": "https://github.com/undeadpickle/claude-code-mcpinstall",
+    "stars": 130
+  },
+  {
+    "name": "artemgetmann's Token Optimization",
+    "type": "gist",
+    "is_official": false,
+    "scores": {
+      "freshness": 8,
+      "popularity": 3,
+      "engagement": 2,
+      "uniqueness": 0,
+      "documentation": 5,
+      "authority": 0,
+      "total": 18
+    },
+    "url": "https://gist.github.com/artemgetmann/74f28d2958b53baf50597b669d4bce43",
+    "stars": null
+  },
+  {
+    "name": "decider/claude-hooks",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 1,
+      "engagement": 1,
+      "uniqueness": 2,
+      "documentation": 3,
+      "authority": 0,
+      "total": 17
+    },
+    "url": "https://github.com/decider/claude-hooks",
+    "stars": 10
+  },
+  {
+    "name": "hikarubw/claude-commands",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 1,
+      "engagement": 1,
+      "uniqueness": 0,
+      "documentation": 3,
+      "authority": 0,
+      "total": 15
+    },
+    "url": "https://github.com/hikarubw/claude-commands",
+    "stars": 3
+  },
+  {
+    "name": "ygCEO/my-awesome-claude-code",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 1,
+      "engagement": 1,
+      "uniqueness": 0,
+      "documentation": 3,
+      "authority": 0,
+      "total": 15
+    },
+    "url": "https://github.com/ygCEO/my-awesome-claude-code",
+    "stars": 0
+  },
+  {
+    "name": "claudecode.io",
+    "type": "website",
+    "is_official": false,
+    "scores": {
+      "freshness": 8,
+      "popularity": 3,
+      "engagement": 2,
+      "uniqueness": 0,
+      "documentation": 2,
+      "authority": 0,
+      "total": 15
+    },
+    "url": "https://www.claudecode.io/commands",
+    "stars": null
+  },
+  {
+    "name": "Claude Code Training Platform",
+    "type": "course",
+    "is_official": false,
+    "scores": {
+      "freshness": 8,
+      "popularity": 3,
+      "engagement": 2,
+      "uniqueness": 0,
+      "documentation": 2,
+      "authority": 0,
+      "total": 15
+    },
+    "url": "https://www.claude-code-training.com/",
+    "stars": null
+  },
+  {
+    "name": "pillheadddd's Slash Commands",
+    "type": "gist",
+    "is_official": false,
+    "scores": {
+      "freshness": 8,
+      "popularity": 3,
+      "engagement": 2,
+      "uniqueness": 0,
+      "documentation": 2,
+      "authority": 0,
+      "total": 15
+    },
+    "url": "https://gist.github.com/pillheadddd/9c8f5823856e6c857f85e613e31e1d90",
+    "stars": null
+  },
+  {
+    "name": "transitive-bullshit's Prompts",
+    "type": "gist",
+    "is_official": false,
+    "scores": {
+      "freshness": 8,
+      "popularity": 3,
+      "engagement": 2,
+      "uniqueness": 0,
+      "documentation": 2,
+      "authority": 0,
+      "total": 15
+    },
+    "url": "https://gist.github.com/transitive-bullshit/487c9cb52c75a9701d312334ed53b20c",
+    "stars": null
+  },
+  {
+    "name": "rjurney's Configuration",
+    "type": "gist",
+    "is_official": false,
+    "scores": {
+      "freshness": 8,
+      "popularity": 3,
+      "engagement": 2,
+      "uniqueness": 0,
+      "documentation": 2,
+      "authority": 0,
+      "total": 15
+    },
+    "url": "https://gist.github.com/rjurney/f7364f2dd0f6b6c21ecd33690eee4fdf",
+    "stars": null
+  },
+  {
+    "name": "wshobson/commands",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 1,
+      "engagement": 1,
+      "uniqueness": 0,
+      "documentation": 2,
+      "authority": 0,
+      "total": 14
+    },
+    "url": "https://github.com/wshobson/commands",
+    "stars": 13
+  },
+  {
+    "name": "ArthurClune/claude-md-examples",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 1,
+      "engagement": 1,
+      "uniqueness": 0,
+      "documentation": 2,
+      "authority": 0,
+      "total": 14
+    },
+    "url": "https://github.com/ArthurClune/claude-md-examples",
+    "stars": 22
+  },
+  {
+    "name": "dwillitzer/claude-settings",
+    "type": "github",
+    "is_official": false,
+    "scores": {
+      "freshness": 10,
+      "popularity": 1,
+      "engagement": 1,
+      "uniqueness": 0,
+      "documentation": 2,
+      "authority": 0,
+      "total": 14
+    },
+    "url": "https://github.com/dwillitzer/claude-settings",
+    "stars": 12
+  }
+]

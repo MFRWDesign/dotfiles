@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  claude-code:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TZ: ${TZ:-America/Los_Angeles}
+    container_name: claude-code-isolated
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ${HOME}/.dotfiles:/workspace
+      - claude-code-bashhistory:/commandhistory
+      - claude-code-config:/home/node/.claude
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=4096
+      - CLAUDE_CONFIG_DIR=/home/node/.claude
+      - POWERLEVEL9K_DISABLE_GITSTATUS=true
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    working_dir: /workspace
+    command: /bin/zsh
+    stdin_open: true
+    tty: true
+    networks:
+      - claude-isolated
+
+networks:
+  claude-isolated:
+    driver: bridge
+    internal: false  # We need DNS resolution for allowed domains
+
+volumes:
+  claude-code-bashhistory:
+  claude-code-config:
