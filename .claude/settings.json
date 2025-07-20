@@ -95,6 +95,15 @@
             "command": "~/.dotfiles/.claude/hooks/log-agent-results.sh"
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.dotfiles/.claude/hooks/capture-success.sh"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
