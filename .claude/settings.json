@@ -1,0 +1,128 @@
+{
+  "model": "claude-3-5-think-20241022",
+  "outputFormats": {
+    "default": "text",
+    "available": ["text", "json", "stream-json"]
+  },
+  "sessionManagement": {
+    "enabled": true,
+    "retentionDays": 30,
+    "autoResume": true,
+    "trackingEnabled": true
+  },
+  "extendedThinking": {
+    "minTokens": 1024,
+    "maxTokens": 32000,
+    "batchThreshold": 32000,
+    "preferredLanguage": "en"
+  },
+  "notifications": {
+    "enabled": true,
+    "channels": ["terminal_bell", "system"],
+    "idleTimeout": 30000,
+    "preferredChannel": "terminal_bell"
+  },
+  "costTracking": {
+    "enabled": true,
+    "monthlyBudget": 100,
+    "alertThreshold": 0.8,
+    "detailedLogging": true
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)",
+      "Bash",
+      "Task",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "TodoWrite",
+      "mcp__*"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(dd if=/dev/*)"
+    ],
+    "additionalDirectories": [
+      "../",
+      "~/Documents/projects",
+      "~/.config"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.dotfiles/.claude/hooks/validate-command.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.dotfiles/.claude/hooks/pre-edit-check.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.dotfiles/.claude/hooks/format-code.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.dotfiles/.claude/hooks/log-agent-results.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.dotfiles/.claude/hooks/enhance-prompt.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.dotfiles/.claude/hooks/session-summary.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "CLAUDE_EXPERT_MODE": "true",
+    "CLAUDE_AUTO_ENHANCE": "true",
+    "CLAUDE_PARALLEL_TOOLS": "true"
+  },
+  "cleanupPeriodDays": 30,
+  "includeCoAuthoredBy": true
+}

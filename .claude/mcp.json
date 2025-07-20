@@ -1,0 +1,48 @@
+{
+  "servers": {
+    "postgres-db": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_URL": "${DATABASE_URL}"
+      }
+    },
+    "github-integration": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "filesystem-enhanced": {
+      "transport": "stdio",
+      "command": "node",
+      "args": ["~/.dotfiles/.claude/mcp-servers/filesystem-enhanced.js"],
+      "env": {
+        "PROJECT_ROOT": "${PWD}"
+      }
+    },
+    "code-analyzer": {
+      "transport": "stdio",
+      "command": "node",
+      "args": ["~/.dotfiles/.claude/mcp-servers/code-analyzer.js"]
+    },
+    "doc-search": {
+      "transport": "sse",
+      "url": "http://localhost:3001/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer ${DOC_SEARCH_TOKEN}"
+      }
+    },
+    "ai-enhance": {
+      "transport": "stdio",
+      "command": "python",
+      "args": ["~/.dotfiles/.claude/mcp-servers/ai_enhance.py"],
+      "env": {
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}
