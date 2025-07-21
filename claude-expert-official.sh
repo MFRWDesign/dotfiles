@@ -112,6 +112,8 @@ directories=(
     "$CLAUDE_HOME/hooks"
     "$CLAUDE_HOME/commands"
     "$CLAUDE_HOME/backups"
+    "$CLAUDE_HOME/scripts"
+    "$CLAUDE_HOME/logs"
 )
 
 for dir in "${directories[@]}"; do
@@ -262,6 +264,126 @@ exit 0'
 handle_file_conflict "$CLAUDE_HOME/hooks/security-check.sh" "$SECURITY_HOOK" "security check hook"
 chmod +x "$CLAUDE_HOME/hooks/security-check.sh" 2>/dev/null || true
 
+# User prompt logging hook
+PROMPT_LOGGER_HOOK='#!/bin/bash
+# Log user prompts for analysis and improvement
+# Based on official documentation patterns
+
+set -euo pipefail
+
+# Read hook input
+INPUT=$(cat)
+PROMPT=$(echo "$INPUT" | jq -r ".prompt // empty")
+TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+
+# Create log directory if it does not exist
+LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
+mkdir -p "$LOG_DIR"
+
+# Log prompt with timestamp (be careful not to log sensitive information)
+LOG_FILE="$LOG_DIR/prompts-$(date +%Y%m%d).log"
+echo "[$TIMESTAMP] Prompt received (length: ${#PROMPT} chars)" >> "$LOG_FILE"
+
+# Always exit 0 to continue processing
+exit 0'
+
+handle_file_conflict "$CLAUDE_HOME/hooks/prompt-logger.sh" "$PROMPT_LOGGER_HOOK" "prompt logger hook"
+chmod +x "$CLAUDE_HOME/hooks/prompt-logger.sh" 2>/dev/null || true
+
+# Session cleanup hook
+SESSION_CLEANUP_HOOK='#!/bin/bash
+# Cleanup tasks when Claude session ends
+# Based on official documentation patterns
+
+set -euo pipefail
+
+# Read hook input
+INPUT=$(cat)
+SESSION_ID=$(echo "$INPUT" | jq -r ".session.id // empty")
+TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+
+# Log session completion
+LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
+mkdir -p "$LOG_DIR"
+echo "[$TIMESTAMP] Session completed: $SESSION_ID" >> "$LOG_DIR/sessions.log"
+
+# Cleanup temporary files older than 1 day
+find "'"$HOME_ABSOLUTE"'/.claude/backups" -name "*.backup" -mtime +1 -delete 2>/dev/null || true
+
+# Always exit 0
+exit 0'
+
+handle_file_conflict "$CLAUDE_HOME/hooks/session-cleanup.sh" "$SESSION_CLEANUP_HOOK" "session cleanup hook"
+chmod +x "$CLAUDE_HOME/hooks/session-cleanup.sh" 2>/dev/null || true
+
+# Cross-platform notification hook
+NOTIFY_HOOK='#!/bin/bash
+# Cross-platform notification system
+# Based on official documentation patterns
+
+set -euo pipefail
+
+# Read hook input
+INPUT=$(cat)
+MESSAGE=$(echo "$INPUT" | jq -r ".message // \"Claude Code notification\"")
+
+# Send notification based on platform
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    osascript -e "display notification \"$MESSAGE\" with title \"Claude Code\"" 2>/dev/null || true
+elif command -v notify-send &> /dev/null; then
+    # Linux with notify-send
+    notify-send "Claude Code" "$MESSAGE" 2>/dev/null || true
+elif command -v zenity &> /dev/null; then
+    # Linux with zenity
+    zenity --info --text="Claude Code: $MESSAGE" 2>/dev/null || true
+else
+    # Fallback: terminal bell
+    echo -e "\a" 2>/dev/null || true
+fi
+
+# Always exit 0
+exit 0'
+
+handle_file_conflict "$CLAUDE_HOME/hooks/notify.sh" "$NOTIFY_HOOK" "notification hook"
+chmod +x "$CLAUDE_HOME/hooks/notify.sh" 2>/dev/null || true
+
+# API Key Helper Script
+API_KEY_HELPER='#!/bin/bash
+# API Key Helper - Generate or retrieve Anthropic API key
+# Based on official documentation patterns
+
+set -euo pipefail
+
+# Check if API key is already set in environment
+if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    echo "$ANTHROPIC_API_KEY"
+    exit 0
+fi
+
+# Check for key in standard locations
+KEY_LOCATIONS=(
+    "$HOME/.anthropic/api_key"
+    "$HOME/.config/anthropic/api_key" 
+    "$HOME/.claude/api_key"
+)
+
+for location in "${KEY_LOCATIONS[@]}"; do
+    if [[ -f "$location" && -r "$location" ]]; then
+        cat "$location"
+        exit 0
+    fi
+done
+
+# If no key found, provide helpful error
+echo "No Anthropic API key found. Please set ANTHROPIC_API_KEY environment variable or:" >&2
+echo "1. Create file: ~/.anthropic/api_key" >&2
+echo "2. Get key from: https://console.anthropic.com/settings/keys" >&2
+exit 1'
+
+handle_file_conflict "$CLAUDE_HOME/scripts/get-api-key.sh" "$API_KEY_HELPER" "API key helper script"
+chmod +x "$CLAUDE_HOME/scripts/get-api-key.sh" 2>/dev/null || true
+
 # Step 2: Create Slash Commands (from official docs examples)
 echo -e "\n${YELLOW}Step 2: Creating Slash Commands...${NC}"
 
@@ -320,8 +442,336 @@ Use the project'"'"'s existing test framework and patterns.'
 
 handle_file_conflict "$CLAUDE_HOME/commands/coverage.md" "$COVERAGE_CMD" "coverage command"
 
-# Step 3: Create settings.json with official patterns
-echo -e "\n${YELLOW}Step 3: Creating settings.json...${NC}"
+# Debug command - systematic debugging assistance
+DEBUG_CMD='---
+description: "Systematic debugging assistance and problem diagnosis"
+tools: ["Read", "Grep", "Bash", "Edit"]
+---
+
+Debug the issue: {{ISSUE_DESCRIPTION|describe the problem you are experiencing}}.
+
+<thinking>
+Let me approach this systematically:
+1. Understand the problem symptoms
+2. Gather relevant information
+3. Form hypotheses about root causes
+4. Test hypotheses systematically
+5. Implement and verify the fix
+</thinking>
+
+Please follow this debugging methodology:
+
+1. **Problem Analysis**
+   - What is the expected behavior?
+   - What is the actual behavior?
+   - When did this issue start?
+   - What changed recently?
+
+2. **Information Gathering**
+   - Check error logs and stack traces
+   - Review recent code changes
+   - Verify environment and dependencies
+   - Test with minimal reproduction case
+
+3. **Hypothesis Formation**
+   - List potential root causes
+   - Prioritize by likelihood and impact
+   - Consider both obvious and subtle causes
+
+4. **Systematic Testing**
+   - Test each hypothesis methodically
+   - Use debugging tools and techniques
+   - Add temporary logging if needed
+   - Verify assumptions
+
+5. **Solution Implementation**
+   - Fix the root cause, not just symptoms
+   - Add tests to prevent regression
+   - Document the solution
+   - Verify the fix works as expected
+
+Focus on finding the root cause rather than applying quick fixes.'
+
+handle_file_conflict "$CLAUDE_HOME/commands/debug.md" "$DEBUG_CMD" "debug command"
+
+# Code review command
+REVIEW_CMD='---
+description: "Comprehensive code review with best practices"
+tools: ["Read", "Grep", "Glob"]
+---
+
+Perform a comprehensive code review of {{TARGET_CODE|the specified code or current changes}}.
+
+<analysis>
+Review criteria:
+1. Code quality and readability
+2. Performance implications
+3. Security considerations
+4. Error handling
+5. Test coverage
+6. Documentation
+7. Best practices adherence
+</analysis>
+
+Please conduct a thorough code review covering:
+
+## Code Quality
+- **Readability**: Is the code clear and self-documenting?
+- **Structure**: Is the code well-organized and modular?
+- **Naming**: Are variables, functions, and classes well-named?
+- **Complexity**: Are functions/methods appropriately sized?
+
+## Technical Assessment
+- **Performance**: Any performance concerns or optimizations?
+- **Security**: Potential security vulnerabilities?
+- **Error Handling**: Comprehensive error handling and edge cases?
+- **Memory Management**: Proper resource handling?
+
+## Best Practices
+- **Design Patterns**: Appropriate use of design patterns?
+- **SOLID Principles**: Following good object-oriented design?
+- **DRY Principle**: Avoiding code duplication?
+- **Testing**: Is the code testable and well-tested?
+
+## Documentation
+- **Comments**: Appropriate and helpful comments?
+- **API Documentation**: Public interfaces documented?
+- **README**: Usage instructions clear?
+
+## Recommendations
+Provide specific, actionable recommendations prioritized by impact:
+1. **Critical Issues** (security, bugs)
+2. **Important Improvements** (performance, maintainability)  
+3. **Nice-to-have Enhancements** (style, documentation)
+
+Focus on constructive feedback that improves code quality.'
+
+handle_file_conflict "$CLAUDE_HOME/commands/review.md" "$REVIEW_CMD" "review command"
+
+# Refactor command  
+REFACTOR_CMD='---
+description: "Structured code refactoring guidance and implementation"
+tools: ["Read", "Edit", "Grep", "Bash"]
+---
+
+Refactor {{TARGET_CODE|the specified code}} with the goal: {{REFACTOR_GOAL|improve code quality, performance, or maintainability}}.
+
+<approach>
+Refactoring methodology:
+1. Understand current implementation
+2. Identify improvement opportunities
+3. Plan refactoring steps
+4. Implement changes incrementally
+5. Verify functionality is preserved
+</approach>
+
+## Refactoring Analysis
+
+### Current State Assessment
+- **Code Structure**: Analyze current organization
+- **Complexity**: Identify overly complex areas
+- **Duplication**: Find repeated code patterns
+- **Dependencies**: Map relationships and coupling
+- **Performance**: Profile current performance
+
+### Refactoring Opportunities
+- **Extract Methods**: Break down large functions
+- **Extract Classes**: Separate responsibilities
+- **Simplify Conditionals**: Reduce complexity
+- **Remove Duplication**: Apply DRY principles
+- **Improve Naming**: Make intent clearer
+
+### Refactoring Plan
+1. **Safety First**: Ensure tests exist or create them
+2. **Small Steps**: Make incremental changes
+3. **Verify Each Step**: Test after each change
+4. **Preserve Behavior**: Maintain functionality
+5. **Measure Impact**: Verify improvements
+
+### Implementation Strategy
+- Use IDE refactoring tools when possible
+- Maintain git history with clear commit messages
+- Update documentation and comments
+- Consider backward compatibility
+- Plan rollback strategy if needed
+
+### Common Refactoring Patterns
+- **Extract Method**: `longMethod()` → `step1()` + `step2()`
+- **Extract Class**: Split responsibilities
+- **Move Method**: Relocate to appropriate class
+- **Replace Magic Numbers**: Use named constants
+- **Simplify Conditional**: Reduce nested if/else
+
+Focus on improving code maintainability while preserving functionality.'
+
+handle_file_conflict "$CLAUDE_HOME/commands/refactor.md" "$REFACTOR_CMD" "refactor command"
+
+# Architecture analysis command
+ARCHITECTURE_CMD='---
+description: "System architecture analysis and design recommendations"
+tools: ["Read", "Grep", "Glob"]
+---
+
+Analyze the system architecture for {{SYSTEM_SCOPE|the current project or specified component}}.
+
+<framework>
+Architecture evaluation framework:
+1. Current state analysis
+2. Quality attributes assessment  
+3. Design patterns identification
+4. Scalability considerations
+5. Improvement recommendations
+</framework>
+
+## Architecture Analysis
+
+### System Overview
+- **Purpose**: What does the system do?
+- **Scope**: What are the boundaries?
+- **Stakeholders**: Who are the users and maintainers?
+- **Constraints**: Technical and business limitations
+
+### Architecture Assessment
+
+#### **Structure & Organization**
+- **Layered Architecture**: Are concerns properly separated?
+- **Module Organization**: Clear boundaries and responsibilities?
+- **Dependency Management**: Appropriate coupling and cohesion?
+- **Interface Design**: Well-defined APIs and contracts?
+
+#### **Quality Attributes**
+- **Scalability**: Can it handle growth in users/data?
+- **Performance**: Response times and throughput adequate?
+- **Reliability**: Fault tolerance and error handling?
+- **Security**: Authentication, authorization, data protection?
+- **Maintainability**: Easy to modify and extend?
+- **Testability**: Can components be tested in isolation?
+
+#### **Design Patterns & Principles**
+- **Architectural Patterns**: MVC, MVP, Microservices, etc.
+- **Design Patterns**: Observer, Factory, Strategy, etc.
+- **SOLID Principles**: Single responsibility, Open/closed, etc.
+- **Domain-Driven Design**: Bounded contexts, entities, services
+
+### Technology Stack Evaluation
+- **Appropriateness**: Right tools for the job?
+- **Consistency**: Coherent technology choices?
+- **Currency**: Up-to-date and supported technologies?
+- **Integration**: Technologies work well together?
+
+### Recommendations
+
+#### **Immediate Improvements**
+- Critical architectural issues
+- Security vulnerabilities
+- Performance bottlenecks
+
+#### **Strategic Enhancements**
+- Scalability improvements
+- Technology modernization
+- Architectural evolution
+
+#### **Best Practices**
+- Documentation standards
+- Development guidelines
+- Monitoring and observability
+
+Focus on practical recommendations that balance technical debt reduction with business value.'
+
+handle_file_conflict "$CLAUDE_HOME/commands/architecture.md" "$ARCHITECTURE_CMD" "architecture command"
+
+# Documentation generation command
+DOCUMENTATION_CMD='---
+description: "Generate comprehensive technical documentation"
+tools: ["Read", "Grep", "Glob", "Write"]
+---
+
+Generate technical documentation for {{DOC_TARGET|the specified code, API, or system}}.
+
+<structure>
+Documentation structure:
+1. Overview and purpose
+2. Architecture and design
+3. API/interface documentation  
+4. Usage examples
+5. Setup and configuration
+6. Troubleshooting guide
+</structure>
+
+## Documentation Generation
+
+### Documentation Types
+- **API Documentation**: Endpoints, parameters, responses
+- **Code Documentation**: Classes, methods, functions
+- **User Documentation**: How-to guides and tutorials
+- **Architecture Documentation**: System design and patterns
+- **Deployment Documentation**: Setup and configuration
+
+### Documentation Standards
+
+#### **API Documentation**
+```markdown
+## Endpoint: POST /api/users
+
+**Description**: Creates a new user account
+
+**Parameters**:
+- `name` (string, required): User full name
+- `email` (string, required): Valid email address
+- `role` (string, optional): User role, defaults to "user"
+
+**Response**:
+- `201 Created`: User created successfully
+- `400 Bad Request`: Invalid input data
+- `409 Conflict`: Email already exists
+
+**Example**:
+```json
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role": "admin"
+}
+```
+
+#### **Code Documentation** 
+Follow language conventions (JSDoc, Sphinx, etc.):
+```javascript
+/**
+ * Calculates compound interest
+ * @param {number} principal - Initial amount
+ * @param {number} rate - Annual interest rate (as decimal)
+ * @param {number} years - Number of years
+ * @returns {number} Final amount after compound interest
+ */
+function calculateCompoundInterest(principal, rate, years) {
+  return principal * Math.pow(1 + rate, years);
+}
+```
+
+### Content Guidelines
+- **Clear and Concise**: Use simple, direct language
+- **Examples**: Include practical examples
+- **Structure**: Use consistent formatting and organization
+- **Current**: Keep documentation up-to-date
+- **Accessible**: Consider audience technical level
+
+### Documentation Tools
+- **Code Comments**: Inline documentation
+- **README Files**: Project overview and setup
+- **Wiki/Docs Site**: Comprehensive documentation
+- **API Docs**: OpenAPI/Swagger for APIs
+- **Diagrams**: Architecture and flow diagrams
+
+Generate documentation that is practical, current, and maintainable.'
+
+handle_file_conflict "$CLAUDE_HOME/commands/documentation.md" "$DOCUMENTATION_CMD" "documentation command"
+
+# Step 3: Create comprehensive settings.json with all documented features
+echo -e "\n${YELLOW}Step 3: Creating comprehensive settings.json...${NC}"
+
+# Ensure required directories exist first
+mkdir -p "$CLAUDE_HOME/scripts"
 
 # Use absolute paths in JSON to avoid tilde expansion issues
 SETTINGS_JSON=$(cat <<EOF
@@ -357,6 +807,37 @@ SETTINGS_JSON=$(cat <<EOF
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME_ABSOLUTE/.claude/hooks/prompt-logger.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME_ABSOLUTE/.claude/hooks/session-cleanup.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME_ABSOLUTE/.claude/hooks/notify.sh"
+          }
+        ]
+      }
     ]
   },
   "permissions": {
@@ -372,12 +853,22 @@ SETTINGS_JSON=$(cat <<EOF
       "WebFetch",
       "WebSearch"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "../docs/",
+      "../shared/", 
+      "~/workspace/"
+    ]
   },
   "env": {
     "CLAUDE_EXPERT": "true",
-    "EDITOR": "${EDITOR:-code}"
-  }
+    "EDITOR": "${EDITOR:-code}",
+    "CLAUDE_MAX_TURNS": "10"
+  },
+  "apiKeyHelper": "$HOME_ABSOLUTE/.claude/scripts/get-api-key.sh",
+  "cleanupPeriodDays": 30,
+  "includeCoAuthoredBy": true,
+  "autoUpdates": true
 }
 EOF
 )
@@ -389,10 +880,51 @@ echo -e "\n${YELLOW}Step 4: Creating MCP configuration...${NC}"
 
 MCP_CONFIG='{
   "servers": {
-    "example": {
-      "comment": "Add your MCP servers here. See claude mcp add --help",
-      "disabled": true,
+    "filesystem": {
+      "comment": "File system operations - reading, writing, and managing files",
       "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+    },
+    "github": {
+      "comment": "GitHub repository access and operations",
+      "transport": "stdio", 
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "your_github_token_here"
+      }
+    },
+    "postgres": {
+      "comment": "PostgreSQL database access and operations", 
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://user:password@localhost:5432/database"
+      }
+    },
+    "sqlite": {
+      "comment": "SQLite database access and operations",
+      "transport": "stdio",
+      "command": "npx", 
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "/path/to/database.db"]
+    },
+    "atlassian": {
+      "comment": "Official Atlassian MCP - Jira and Confluence integration",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-atlassian"],
+      "env": {
+        "ATLASSIAN_INSTANCE_URL": "https://your-instance.atlassian.net",
+        "ATLASSIAN_USERNAME": "your-email@example.com",
+        "ATLASSIAN_API_TOKEN": "your_api_token_here"
+      }
+    },
+    "example-disabled": {
+      "comment": "Example server configuration - disabled by default",
+      "disabled": true,
+      "transport": "stdio", 
       "command": "/path/to/server",
       "args": [],
       "env": {}

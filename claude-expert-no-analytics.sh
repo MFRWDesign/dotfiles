@@ -1,17 +1,17 @@
 #!/bin/bash
-# Claude Expert Setup - Enhanced Edition Based on Complete Official Documentation
-# Creates comprehensive Claude Code expert configuration with ALL features from docs
-# Idempotent and handles conflicts with user prompts
+# Claude Expert Setup - No Analytics Edition
+# Creates comprehensive Claude Code expert configuration with ALL features except analytics/metrics
+# Based on claude-expert-enhanced.sh but with analytics/metrics removed
 
 set -euo pipefail
 
 # Script version
-VERSION="2.0.0-enhanced"
+VERSION="2.0.0-no-analytics"
 
-echo "🚀 Claude Expert Setup - Enhanced Edition (v$VERSION)"
+echo "🚀 Claude Expert Setup - No Analytics Edition (v$VERSION)"
 echo "========================================================="
 echo "Setting up comprehensive Claude Code expert configuration"
-echo "with ALL features from official documentation"
+echo "with ALL features except analytics/metrics"
 echo ""
 
 # Colors for output
@@ -136,8 +136,8 @@ for dir in "${directories[@]}"; do
     fi
 done
 
-# Step 1: Create Comprehensive Hooks (based on all tools from docs)
-echo -e "\n${YELLOW}Step 1: Creating Comprehensive Hooks...${NC}"
+# Step 1: Create Comprehensive Hooks (without analytics)
+echo -e "\n${YELLOW}Step 1: Creating Comprehensive Hooks (No Analytics)...${NC}"
 
 # Pre-backup hook for all file modification tools
 PRE_BACKUP_HOOK='#!/bin/bash
@@ -358,10 +358,10 @@ exit 0'
 handle_file_conflict "$CLAUDE_HOME/hooks/security-check.sh" "$SECURITY_HOOK" "comprehensive security check hook"
 chmod +x "$CLAUDE_HOME/hooks/security-check.sh" 2>/dev/null || true
 
-# Tool usage tracking hook
+# Simple tool usage logging hook (no analytics/metrics)
 TOOL_USAGE_HOOK='#!/bin/bash
-# Track tool usage for analytics and debugging
-# Based on official documentation patterns
+# Simple tool usage logging based on official documentation
+# No analytics or metrics collection
 
 set -euo pipefail
 
@@ -374,32 +374,19 @@ TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
 mkdir -p "$LOG_DIR"
 
-# Log tool usage
-LOG_FILE="$LOG_DIR/tool-usage-$(date +%Y%m%d).log"
-echo "[$TIMESTAMP] Tool: $TOOL" >> "$LOG_FILE"
-
-# Count tool usage for statistics
-STATS_FILE="$LOG_DIR/tool-stats.json"
-if [[ -f "$STATS_FILE" ]]; then
-    # Update existing stats
-    jq --arg tool "$TOOL" \
-       "if has(\$tool) then .[\$tool] += 1 else .[\$tool] = 1 end" \
-       "$STATS_FILE" > "$STATS_FILE.tmp" && mv "$STATS_FILE.tmp" "$STATS_FILE"
-else
-    # Create new stats file
-    echo "{\"$TOOL\": 1}" | jq "." > "$STATS_FILE"
-fi
+# Simple logging as shown in docs
+echo "[$TIMESTAMP] Tool: $TOOL, User: $USER" >> "$LOG_DIR/audit.log"
 
 # Always exit 0 to continue processing
 exit 0'
 
-handle_file_conflict "$CLAUDE_HOME/hooks/tool-usage.sh" "$TOOL_USAGE_HOOK" "tool usage tracking hook"
+handle_file_conflict "$CLAUDE_HOME/hooks/tool-usage.sh" "$TOOL_USAGE_HOOK" "simple tool usage logging hook"
 chmod +x "$CLAUDE_HOME/hooks/tool-usage.sh" 2>/dev/null || true
 
-# Enhanced user prompt logging hook with analysis
+# Simple user prompt logging hook (no analytics)
 PROMPT_LOGGER_HOOK='#!/bin/bash
-# Enhanced prompt logging with categorization and analysis
-# Based on official documentation patterns
+# Simple prompt logging based on official documentation
+# No categorization or analytics
 
 set -euo pipefail
 
@@ -412,87 +399,39 @@ TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
 mkdir -p "$LOG_DIR"
 
-# Log prompt with timestamp
-LOG_FILE="$LOG_DIR/prompts-$(date +%Y%m%d).log"
-echo "[$TIMESTAMP] Prompt: ${PROMPT:0:100}..." >> "$LOG_FILE"
-
-# Categorize prompt type
-CATEGORY="general"
-if echo "$PROMPT" | grep -qiE "(debug|fix|error|bug)"; then
-    CATEGORY="debugging"
-elif echo "$PROMPT" | grep -qiE "(create|build|implement|add)"; then
-    CATEGORY="development"
-elif echo "$PROMPT" | grep -qiE "(analyze|review|audit|check)"; then
-    CATEGORY="analysis"
-elif echo "$PROMPT" | grep -qiE "(test|coverage|unit test)"; then
-    CATEGORY="testing"
-elif echo "$PROMPT" | grep -qiE "(document|readme|comment)"; then
-    CATEGORY="documentation"
-fi
-
-# Update category statistics
-CATEGORY_FILE="$LOG_DIR/prompt-categories.json"
-if [[ -f "$CATEGORY_FILE" ]]; then
-    jq --arg cat "$CATEGORY" \
-       "if has(\$cat) then .[\$cat] += 1 else .[\$cat] = 1 end" \
-       "$CATEGORY_FILE" > "$CATEGORY_FILE.tmp" && mv "$CATEGORY_FILE.tmp" "$CATEGORY_FILE"
-else
-    echo "{\"$CATEGORY\": 1}" | jq "." > "$CATEGORY_FILE"
-fi
+# Simple prompt logging as shown in docs
+echo "Processing prompt: $PROMPT" >> "$LOG_DIR/audit.log"
 
 # Always exit 0 to continue processing
 exit 0'
 
-handle_file_conflict "$CLAUDE_HOME/hooks/prompt-logger.sh" "$PROMPT_LOGGER_HOOK" "enhanced prompt logger hook"
+handle_file_conflict "$CLAUDE_HOME/hooks/prompt-logger.sh" "$PROMPT_LOGGER_HOOK" "simple prompt logger hook"
 chmod +x "$CLAUDE_HOME/hooks/prompt-logger.sh" 2>/dev/null || true
 
-# Session management hook with metrics
+# Session cleanup hook (no metrics)
 SESSION_CLEANUP_HOOK='#!/bin/bash
-# Enhanced session cleanup with metrics tracking
+# Session cleanup hook - cleans up old files
 # Based on official documentation patterns
 
 set -euo pipefail
-
-# Read hook input
-INPUT=$(cat)
-SESSION_ID=$(echo "$INPUT" | jq -r ".session.id // empty")
-TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
-
-# Log session completion
-LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
-mkdir -p "$LOG_DIR"
-echo "[$TIMESTAMP] Session completed: $SESSION_ID" >> "$LOG_DIR/sessions.log"
-
-# Calculate session metrics if start time is available
-SESSION_START_FILE="$LOG_DIR/.session_start_$SESSION_ID"
-if [[ -f "$SESSION_START_FILE" ]]; then
-    START_TIME=$(cat "$SESSION_START_FILE")
-    END_TIME=$(date +%s)
-    DURATION=$((END_TIME - START_TIME))
-    
-    # Log session duration
-    echo "[$TIMESTAMP] Session $SESSION_ID duration: $DURATION seconds" >> "$LOG_DIR/session-metrics.log"
-    
-    # Clean up start time file
-    rm -f "$SESSION_START_FILE"
-fi
 
 # Cleanup temporary files older than 3 days
 find "'"$HOME_ABSOLUTE"'/.claude/backups" -name "*.backup" -mtime +3 -delete 2>/dev/null || true
 
 # Archive old logs (older than 30 days)
+LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
 find "$LOG_DIR" -name "*.log" -mtime +30 -exec gzip {} \; 2>/dev/null || true
 
 # Always exit 0
 exit 0'
 
-handle_file_conflict "$CLAUDE_HOME/hooks/session-cleanup.sh" "$SESSION_CLEANUP_HOOK" "enhanced session cleanup hook"
+handle_file_conflict "$CLAUDE_HOME/hooks/session-cleanup.sh" "$SESSION_CLEANUP_HOOK" "session cleanup hook"
 chmod +x "$CLAUDE_HOME/hooks/session-cleanup.sh" 2>/dev/null || true
 
-# SubagentStop hook for agent completion tracking
+# SubagentStop hook (no metrics)
 SUBAGENT_STOP_HOOK='#!/bin/bash
 # SubagentStop hook - tracks when autonomous agents complete their tasks
-# Based on official Claude Code documentation
+# Based on official Claude Code documentation - no metrics
 
 set -euo pipefail
 
@@ -507,34 +446,9 @@ TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
 mkdir -p "$LOG_DIR"
 
-# Log agent completion
+# Simple agent completion logging
 AGENT_LOG="$LOG_DIR/agents.log"
 echo "[$TIMESTAMP] SubagentStop: Agent $AGENT_ID ($AGENT_TYPE) - Status: $COMPLETION_STATUS" >> "$AGENT_LOG"
-
-# Track agent performance metrics
-AGENT_METRICS="$LOG_DIR/agent-metrics.json"
-if [[ -f "$AGENT_METRICS" ]]; then
-    # Update metrics for this agent type
-    jq --arg type "$AGENT_TYPE" --arg status "$COMPLETION_STATUS" \
-       "if has(\$type) then
-          .[\$type].total += 1 |
-          if \$status == \"completed\" then
-            .[\$type].completed += 1
-          else
-            .[\$type].failed += 1
-          end
-        else
-          .[\$type] = {total: 1, completed: (\$status == \"completed\" | if . then 1 else 0 end), failed: (\$status != \"completed\" | if . then 1 else 0 end)}
-        end" \
-       "$AGENT_METRICS" > "$AGENT_METRICS.tmp" && mv "$AGENT_METRICS.tmp" "$AGENT_METRICS"
-else
-    # Create initial metrics
-    if [[ "$COMPLETION_STATUS" == "completed" ]]; then
-        echo "{\"$AGENT_TYPE\": {\"total\": 1, \"completed\": 1, \"failed\": 0}}" | jq "." > "$AGENT_METRICS"
-    else
-        echo "{\"$AGENT_TYPE\": {\"total\": 1, \"completed\": 0, \"failed\": 1}}" | jq "." > "$AGENT_METRICS"
-    fi
-fi
 
 # Clean up any temporary agent files
 AGENT_TEMP_DIR="$LOG_DIR/.agent_$AGENT_ID"
@@ -634,59 +548,10 @@ exit 0'
 handle_file_conflict "$CLAUDE_HOME/hooks/notify.sh" "$NOTIFY_HOOK" "enhanced notification hook"
 chmod +x "$CLAUDE_HOME/hooks/notify.sh" 2>/dev/null || true
 
-# Performance monitoring hook
-PERFORMANCE_HOOK='#!/bin/bash
-# Monitor performance of Claude Code operations
-# Track execution time and resource usage
-
-set -euo pipefail
-
-# Read hook input
-INPUT=$(cat)
-EVENT=$(echo "$INPUT" | jq -r ".event // empty")
-TOOL=$(echo "$INPUT" | jq -r ".tool // empty")
-
-# Log directory
-LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
-mkdir -p "$LOG_DIR"
-PERF_LOG="$LOG_DIR/performance.log"
-
-case "$EVENT" in
-    PreToolUse)
-        # Record start time
-        echo "$TOOL:$(date +%s.%N)" > "$LOG_DIR/.perf_start_$$"
-        ;;
-    PostToolUse)
-        # Calculate duration
-        if [[ -f "$LOG_DIR/.perf_start_$$" ]]; then
-            START_INFO=$(cat "$LOG_DIR/.perf_start_$$")
-            START_TIME=$(echo "$START_INFO" | cut -d: -f2)
-            END_TIME=$(date +%s.%N)
-            DURATION=$(echo "$END_TIME - $START_TIME" | bc)
-            
-            # Log performance data
-            echo "[$(date "+%Y-%m-%d %H:%M:%S")] Tool: $TOOL, Duration: ${DURATION}s" >> "$PERF_LOG"
-            
-            # Clean up
-            rm -f "$LOG_DIR/.perf_start_$$"
-            
-            # Alert if operation took too long
-            if (( $(echo "$DURATION > 10" | bc -l) )); then
-                echo "Warning: $TOOL operation took ${DURATION}s" >&2
-            fi
-        fi
-        ;;
-esac
-
-exit 0'
-
-handle_file_conflict "$CLAUDE_HOME/hooks/performance.sh" "$PERFORMANCE_HOOK" "performance monitoring hook"
-chmod +x "$CLAUDE_HOME/hooks/performance.sh" 2>/dev/null || true
-
-# PreCompact hook for session data cleanup
+# PreCompact hook (no metrics)
 PRECOMPACT_HOOK='#!/bin/bash
 # PreCompact hook - prepares for session data compaction
-# Based on official Claude Code documentation
+# Based on official Claude Code documentation - no metrics
 
 set -euo pipefail
 
@@ -714,23 +579,6 @@ echo "$INPUT" | jq ". + {timestamp: \"$TIMESTAMP\", event: \"pre_compact\"}" > "
 
 # Clean up old session backups (keep last 10)
 find "$BACKUP_DIR" -name "session_*.json" -type f | sort -r | tail -n +11 | xargs -r rm -f
-
-# Calculate and log session statistics
-if [[ -f "$LOG_DIR/session-stats.json" ]]; then
-    # Update session statistics
-    jq --arg id "$SESSION_ID" --arg size "$SESSION_SIZE" \
-       ".sessions[\$id] = {
-          last_compact: now | strftime(\"%Y-%m-%d %H:%M:%S\"),
-          size_before_compact: \$size | tonumber,
-          compact_count: ((.sessions[\$id].compact_count // 0) + 1)
-        }" \
-       "$LOG_DIR/session-stats.json" > "$LOG_DIR/session-stats.json.tmp" && \
-       mv "$LOG_DIR/session-stats.json.tmp" "$LOG_DIR/session-stats.json"
-else
-    # Create initial stats file
-    echo "{\"sessions\": {\"$SESSION_ID\": {\"last_compact\": \"$TIMESTAMP\", \"size_before_compact\": $SESSION_SIZE, \"compact_count\": 1}}}" | \
-        jq "." > "$LOG_DIR/session-stats.json"
-fi
 
 # Notify about large sessions
 if [[ $SESSION_SIZE -gt 1048576 ]]; then  # 1MB
@@ -820,7 +668,7 @@ exit 1'
 handle_file_conflict "$CLAUDE_HOME/scripts/get-api-key.sh" "$API_KEY_HELPER" "enhanced API key helper script"
 chmod +x "$CLAUDE_HOME/scripts/get-api-key.sh" 2>/dev/null || true
 
-# Step 2: Create Comprehensive Slash Commands (based on common workflows)
+# Step 2: Create Comprehensive Slash Commands (keeping all from original)
 echo -e "\n${YELLOW}Step 2: Creating Comprehensive Slash Commands...${NC}"
 
 # Built-in Commands Documentation
@@ -1486,7 +1334,7 @@ Focus on improving maintainability while preserving behavior.'
 
 handle_file_conflict "$CLAUDE_HOME/commands/refactor.md" "$REFACTOR_CMD" "refactoring command"
 
-# Step 3: Create comprehensive settings.json with all features
+# Step 3: Create comprehensive settings.json with all features (no performance hook)
 echo -e "\n${YELLOW}Step 3: Creating comprehensive settings.json...${NC}"
 
 # Use absolute paths in JSON to avoid tilde expansion issues
@@ -1518,10 +1366,6 @@ SETTINGS_JSON=$(cat <<EOF
           {
             "type": "command",
             "command": "$HOME_ABSOLUTE/.claude/hooks/tool-usage.sh"
-          },
-          {
-            "type": "command",
-            "command": "$HOME_ABSOLUTE/.claude/hooks/performance.sh"
           }
         ]
       }
@@ -1533,15 +1377,6 @@ SETTINGS_JSON=$(cat <<EOF
           {
             "type": "command",
             "command": "$HOME_ABSOLUTE/.claude/hooks/post-lint.sh"
-          }
-        ]
-      },
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME_ABSOLUTE/.claude/hooks/performance.sh"
           }
         ]
       }
@@ -1643,7 +1478,7 @@ EOF
 
 handle_file_conflict "$CLAUDE_HOME/settings.json" "$SETTINGS_JSON" "comprehensive settings.json"
 
-# Step 4: Create enhanced MCP configuration
+# Step 4: Create enhanced MCP configuration (same as original)
 echo -e "\n${YELLOW}Step 4: Creating enhanced MCP configuration...${NC}"
 
 MCP_CONFIG='{
@@ -1745,10 +1580,10 @@ MCP_CONFIG='{
 
 handle_file_conflict "$CLAUDE_HOME/mcp.json" "$MCP_CONFIG" "enhanced MCP configuration"
 
-# Step 5: Create comprehensive CLAUDE.md with advanced features
+# Step 5: Create comprehensive CLAUDE.md (no analytics mentions)
 echo -e "\n${YELLOW}Step 5: Creating comprehensive CLAUDE.md...${NC}"
 
-CLAUDE_MD='# Claude Code Expert Configuration - Enhanced Edition
+CLAUDE_MD='# Claude Code Expert Configuration - No Analytics Edition
 
 This is my comprehensive Claude Code configuration based on the complete official documentation.
 
@@ -1774,11 +1609,11 @@ This is my comprehensive Claude Code configuration based on the complete officia
 - ✅ **Pre-backup**: Automatic file backups before ALL file modifications
 - ✅ **Post-lint**: Auto-formatting for multiple languages after changes
 - ✅ **Security validation**: Comprehensive command and file safety checks
-- ✅ **Tool usage tracking**: Analytics and performance monitoring
-- ✅ **Prompt logging**: Categorized prompt analysis
-- ✅ **Session management**: Metrics and cleanup
+- ✅ **Tool usage logging**: Simple audit trail of tool usage
+- ✅ **Prompt logging**: Basic prompt tracking
+- ✅ **Session cleanup**: Periodic cleanup of old files
 - ✅ **Smart notifications**: Context-aware cross-platform alerts
-- ✅ **Performance monitoring**: Track operation durations
+- ✅ **Agent tracking**: SubagentStop and PreCompact hooks
 
 ### Slash Commands
 
@@ -1974,7 +1809,7 @@ When errors occur:
 
 handle_file_conflict "$CLAUDE_HOME/CLAUDE.md" "$CLAUDE_MD" "comprehensive CLAUDE.md"
 
-# Step 6: Create workflow pattern files
+# Step 6: Create workflow pattern files (same as original)
 echo -e "\n${YELLOW}Step 6: Creating workflow patterns and templates...${NC}"
 
 # Development patterns
@@ -2264,7 +2099,7 @@ export const errorHandler = (
 
 handle_file_conflict "$CLAUDE_HOME/templates/code-templates.md" "$CODE_TEMPLATES" "code templates"
 
-# Step 7: Create IDE integration helpers
+# Step 7: Create IDE integration helpers (same as original)
 echo -e "\n${YELLOW}Step 7: Creating IDE integration helpers...${NC}"
 
 # VS Code integration guide
@@ -2368,7 +2203,7 @@ SHORTCUTS_REF='# Keyboard Shortcuts Reference
 
 handle_file_conflict "$CLAUDE_HOME/ide-integration/shortcuts.md" "$SHORTCUTS_REF" "keyboard shortcuts reference"
 
-# Step 8: Create terminal setup helper
+# Step 8: Create terminal setup helper (same as original)
 echo -e "\n${YELLOW}Step 8: Creating enhanced terminal setup script...${NC}"
 
 TERMINAL_SETUP='#!/bin/bash
@@ -2513,14 +2348,14 @@ echo "Setup complete! Start Claude Code with: claude"'
 handle_file_conflict "$CLAUDE_HOME/terminal-setup.sh" "$TERMINAL_SETUP" "enhanced terminal setup script"
 chmod +x "$CLAUDE_HOME/terminal-setup.sh" 2>/dev/null || true
 
-# Step 9: Create verification script
+# Step 9: Create verification script (updated to reflect no analytics)
 echo -e "\n${YELLOW}Step 9: Creating comprehensive verification script...${NC}"
 
 VERIFY_SCRIPT='#!/bin/bash
-# Verify Claude Expert Enhanced Setup
+# Verify Claude Expert No Analytics Setup
 
-echo "🔍 Claude Expert Enhanced Setup Verification"
-echo "==========================================="
+echo "🔍 Claude Expert No Analytics Setup Verification"
+echo "==============================================="
 
 # Colors
 GREEN='\''\\033[0;32m'\''
@@ -2565,7 +2400,6 @@ hooks=(
     "prompt-logger.sh"
     "session-cleanup.sh"
     "notify.sh"
-    "performance.sh"
     "subagent-stop.sh"
     "pre-compact.sh"
 )
@@ -2687,18 +2521,18 @@ fi
 # Feature summary
 echo -e "\n${YELLOW}Feature Summary${NC}"
 echo "==============="
-check_feature $([[ -f "$HOME/.claude/hooks/performance.sh" ]] && echo 0 || echo 1) "Performance monitoring"
-check_feature $([[ -f "$HOME/.claude/hooks/tool-usage.sh" ]] && echo 0 || echo 1) "Tool usage analytics"
+check_feature $([[ -f "$HOME/.claude/hooks/tool-usage.sh" ]] && echo 0 || echo 1) "Simple audit logging"
 check_feature $([[ -d "$HOME/.claude/workflows" ]] && echo 0 || echo 1) "Workflow patterns"
 check_feature $([[ -d "$HOME/.claude/templates" ]] && echo 0 || echo 1) "Code templates"
 check_feature $([[ -d "$HOME/.claude/ide-integration" ]] && echo 0 || echo 1) "IDE integration guides"
+echo -e "  ${GREEN}✓${NC} NO analytics or metrics collection"
 
 # Summary
 echo -e "\n${YELLOW}Verification Summary${NC}"
 echo "===================="
 if [[ $errors -eq 0 ]]; then
     if [[ $warnings -eq 0 ]]; then
-        echo -e "${GREEN}✅ All checks passed! Enhanced expert system fully configured.${NC}"
+        echo -e "${GREEN}✅ All checks passed! Expert system fully configured without analytics.${NC}"
         echo -e "${GREEN}   Total features enabled: $features${NC}"
     else
         echo -e "${GREEN}✅ Setup complete with $warnings warnings.${NC}"
@@ -2715,13 +2549,13 @@ echo "3. Try '\''/<tab>'\'' in Claude to see all slash commands"
 echo "4. Run '\''~/.claude/terminal-setup.sh'\'' for terminal config"
 echo "5. Check '\''~/.claude/ide-integration/'\'' for IDE setup guides"
 echo ""
-echo "Explore all the new features from the official docs!"'
+echo "All features enabled except analytics/metrics!"'
 
 handle_file_conflict "$CLAUDE_HOME/verify.sh" "$VERIFY_SCRIPT" "comprehensive verification script"
 chmod +x "$CLAUDE_HOME/verify.sh" 2>/dev/null || true
 
 # Create a quick reference card
-QUICK_REFERENCE='# Claude Code Expert - Quick Reference
+QUICK_REFERENCE='# Claude Code Expert - Quick Reference (No Analytics Edition)
 
 ## Essential Commands
 - `claude` - Start interactive session
@@ -2761,36 +2595,41 @@ QUICK_REFERENCE='# Claude Code Expert - Quick Reference
 - Commands: `~/.claude/commands/`
 - Logs: `~/.claude/logs/`
 - Backups: `~/.claude/backups/`
-- Memory: `~/.claude/CLAUDE.md`'
+- Memory: `~/.claude/CLAUDE.md`
+
+## What'\''s Different
+This setup includes ALL features from the official docs EXCEPT:
+- ❌ No performance metrics tracking
+- ❌ No tool usage statistics
+- ❌ No prompt categorization analytics
+- ❌ No session duration tracking
+- ✅ Simple audit logging only
+- ✅ All other features remain!'
 
 handle_file_conflict "$CLAUDE_HOME/QUICK_REFERENCE.md" "$QUICK_REFERENCE" "quick reference card"
 
 # Final summary
-echo -e "\n${GREEN}✅ Claude Expert Enhanced Setup Complete!${NC}"
+echo -e "\n${GREEN}✅ Claude Expert No Analytics Setup Complete!${NC}"
 echo -e "\n${YELLOW}What's been configured:${NC}"
 echo "- 🔒 Comprehensive security validation for all tools"
 echo "- 💾 Automatic backups for all file modifications"
 echo "- 🧹 Enhanced auto-formatting for many languages"
-echo "- 📊 Performance monitoring and analytics"
+echo "- 📝 Simple audit logging (NO analytics/metrics)"
 echo "- 🚀 15+ slash commands covering all workflows"
-echo "- 🔧 8 different hook types for complete control"
+echo "- 🔧 All 7 hook types for complete control"
 echo "- 📁 10+ MCP server configurations"
 echo "- 📝 Comprehensive CLAUDE.md with all features"
 echo "- 🖥️  IDE integration guides and shortcuts"
 echo "- 📚 Workflow patterns and code templates"
-echo "- 🎯 Tool usage tracking and metrics"
 
-echo -e "\n${YELLOW}New Features Added:${NC}"
-echo "- ✨ Performance monitoring hooks"
-echo "- 📈 Tool usage analytics"
-echo "- 🗂️ Organized command categories"
-echo "- 💡 Development workflow patterns"
-echo "- 🐛 Debugging strategy guides"
-echo "- 📄 Code template library"
-echo "- ⌨️  Complete keyboard shortcuts reference"
-echo "- 🖥️  IDE-specific integration guides"
-echo "- 🔍 Enhanced verification script"
-echo "- 📋 Quick reference card"
+echo -e "\n${YELLOW}Analytics/Metrics Removed:${NC}"
+echo "- ❌ Tool usage statistics (tool-stats.json)"
+echo "- ❌ Prompt categorization (prompt-categories.json)"
+echo "- ❌ Session duration tracking"
+echo "- ❌ Agent performance metrics (agent-metrics.json)"
+echo "- ❌ Performance timing calculations"
+echo "- ❌ Session statistics (session-stats.json)"
+echo "- ✅ Kept simple logging for audit trail"
 
 echo -e "\n${YELLOW}Next Steps:${NC}"
 echo "1. Run ${GREEN}~/.claude/verify.sh${NC} to verify installation"
@@ -2800,6 +2639,6 @@ echo "4. Check ${GREEN}~/.claude/QUICK_REFERENCE.md${NC} for quick help"
 echo "5. Configure MCP servers with ${GREEN}claude mcp add${NC}"
 echo "6. Start using Claude Code with ${GREEN}claude${NC}"
 
-echo -e "\n${BLUE}This enhanced setup includes ALL practical features from the official documentation!${NC}"
+echo -e "\n${BLUE}This setup includes ALL features from the official documentation${NC}"
+echo -e "${BLUE}except analytics and metrics collection!${NC}"
 echo -e "${BLUE}Documentation: https://docs.anthropic.com/en/docs/claude-code${NC}"
-'
