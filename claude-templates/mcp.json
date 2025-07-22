@@ -1,0 +1,96 @@
+{
+  "servers": {
+    "filesystem": {
+      "comment": "Enhanced file system operations - reading, writing, and managing files",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp", "$HOME/projects"],
+      "env": {
+        "FILESYSTEM_READ_ONLY": "false"
+      }
+    },
+    "github": {
+      "comment": "GitHub repository access and operations with enhanced features",
+      "transport": "stdio", 
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN:-your_github_token_here}",
+        "GITHUB_ENTERPRISE_URL": "${GITHUB_ENTERPRISE_URL:-}"
+      }
+    },
+    "postgres": {
+      "comment": "PostgreSQL database access and operations", 
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "${DATABASE_URL:-postgresql://user:password@localhost:5432/database}"
+      }
+    },
+    "sqlite": {
+      "comment": "SQLite database access and operations",
+      "transport": "stdio",
+      "command": "npx", 
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "${SQLITE_DB_PATH:-/path/to/database.db}"]
+    },
+    "atlassian": {
+      "comment": "Official Atlassian MCP - Jira and Confluence integration",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-atlassian"],
+      "env": {
+        "ATLASSIAN_INSTANCE_URL": "${ATLASSIAN_URL:-https://your-instance.atlassian.net}",
+        "ATLASSIAN_USERNAME": "${ATLASSIAN_EMAIL:-your-email@example.com}",
+        "ATLASSIAN_API_TOKEN": "${ATLASSIAN_TOKEN:-your_api_token_here}"
+      }
+    },
+    "git": {
+      "comment": "Advanced Git operations beyond basic commands",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git"],
+      "env": {
+        "GIT_USER_NAME": "${GIT_AUTHOR_NAME:-}",
+        "GIT_USER_EMAIL": "${GIT_AUTHOR_EMAIL:-}"
+      }
+    },
+    "shell": {
+      "comment": "Enhanced shell command execution with safety checks",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-shell"],
+      "env": {
+        "SHELL_SAFE_MODE": "true",
+        "SHELL_ALLOWED_COMMANDS": "ls,cat,grep,find,echo,pwd"
+      }
+    },
+    "web-browser": {
+      "comment": "Web browsing and content extraction",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-web-browser"]
+    },
+    "slack": {
+      "comment": "Slack integration for notifications and messaging",
+      "disabled": true,
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN:-xoxb-your-token}",
+        "SLACK_APP_TOKEN": "${SLACK_APP_TOKEN:-xapp-your-token}"
+      }
+    },
+    "google-drive": {
+      "comment": "Google Drive file access and management",
+      "disabled": true,
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-google-drive"],
+      "env": {
+        "GOOGLE_DRIVE_CREDENTIALS": "${GOOGLE_DRIVE_CREDENTIALS:-/path/to/credentials.json}"
+      }
+    }
+  }
+}

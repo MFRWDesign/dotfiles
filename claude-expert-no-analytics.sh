@@ -140,7 +140,8 @@ done
 echo -e "\n${YELLOW}Step 1: Creating Comprehensive Hooks (No Analytics)...${NC}"
 
 # Pre-backup hook for all file modification tools
-PRE_BACKUP_HOOK='#!/bin/bash
+PRE_BACKUP_HOOK=$(cat <<'EOF'
+#!/bin/bash
 # Create backups before file modifications - handles all file tools
 # Based on official Claude Code documentation
 
@@ -170,7 +171,7 @@ if [[ "$TOOL" =~ ^(Write|Edit|MultiEdit|NotebookEdit)$ ]]; then
     
     if [[ -n "$FILE_PATH" && -f "$FILE_PATH" ]]; then
         # Create backup directory with date
-        BACKUP_DIR="'"$HOME_ABSOLUTE"'/.claude/backups/$(date +%Y%m%d)"
+        BACKUP_DIR="$HOME/.claude/backups/$(date +%Y%m%d)"
         mkdir -p "$BACKUP_DIR"
         
         # Create timestamped backup
@@ -183,13 +184,16 @@ if [[ "$TOOL" =~ ^(Write|Edit|MultiEdit|NotebookEdit)$ ]]; then
 fi
 
 # Always exit 0 to continue processing
-exit 0'
+exit 0
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/hooks/pre-backup.sh" "$PRE_BACKUP_HOOK" "comprehensive pre-backup hook"
 chmod +x "$CLAUDE_HOME/hooks/pre-backup.sh" 2>/dev/null || true
 
 # Enhanced post-lint hook with more language support
-POST_LINT_HOOK='#!/bin/bash
+POST_LINT_HOOK=$(cat <<'EOF'
+#!/bin/bash
 # Auto-format code after modifications - supports many languages
 # Based on official documentation patterns
 
@@ -204,10 +208,10 @@ PARAMS=$(echo "$INPUT" | jq -r ".params // empty")
 if [[ "$TOOL" =~ ^(Write|Edit|MultiEdit|NotebookEdit)$ ]]; then
     # Extract file path based on tool
     case "$TOOL" in
-        Write|Edit|MultiEdit)
+        "Write"|"Edit"|"MultiEdit")
             FILE_PATH=$(echo "$PARAMS" | jq -r ".file_path // empty")
             ;;
-        NotebookEdit)
+        "NotebookEdit")
             FILE_PATH=$(echo "$PARAMS" | jq -r ".notebook_path // empty")
             ;;
     esac
@@ -269,13 +273,16 @@ if [[ "$TOOL" =~ ^(Write|Edit|MultiEdit|NotebookEdit)$ ]]; then
     fi
 fi
 
-exit 0'
+exit 0
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/hooks/post-lint.sh" "$POST_LINT_HOOK" "enhanced post-lint hook"
 chmod +x "$CLAUDE_HOME/hooks/post-lint.sh" 2>/dev/null || true
 
 # Comprehensive security validation hook
-SECURITY_HOOK='#!/bin/bash
+SECURITY_HOOK=$(cat <<'EOF'
+#!/bin/bash
 # Comprehensive security validation hook based on official docs
 # Returns JSON response for allow/deny decisions
 
@@ -320,7 +327,7 @@ case "$TOOL" in
         fi
         ;;
         
-    Write|Edit|MultiEdit|NotebookEdit)
+    "Write"|"Edit"|"MultiEdit"|"NotebookEdit")
         # Extract file path based on tool type
         if [[ "$TOOL" == "NotebookEdit" ]]; then
             FILE_PATH=$(echo "$PARAMS" | jq -r ".notebook_path // empty")
@@ -353,13 +360,16 @@ esac
 
 # Default: allow
 output_json "true" "Security check passed"
-exit 0'
+exit 0
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/hooks/security-check.sh" "$SECURITY_HOOK" "comprehensive security check hook"
 chmod +x "$CLAUDE_HOME/hooks/security-check.sh" 2>/dev/null || true
 
 # Simple tool usage logging hook (no analytics/metrics)
-TOOL_USAGE_HOOK='#!/bin/bash
+TOOL_USAGE_HOOK=$(cat <<'EOF'
+#!/bin/bash
 # Simple tool usage logging based on official documentation
 # No analytics or metrics collection
 
@@ -371,20 +381,23 @@ TOOL=$(echo "$INPUT" | jq -r ".tool // empty")
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
 # Create log directory if it does not exist
-LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
+LOG_DIR="$HOME/.claude/logs"
 mkdir -p "$LOG_DIR"
 
 # Simple logging as shown in docs
 echo "[$TIMESTAMP] Tool: $TOOL, User: $USER" >> "$LOG_DIR/audit.log"
 
 # Always exit 0 to continue processing
-exit 0'
+exit 0
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/hooks/tool-usage.sh" "$TOOL_USAGE_HOOK" "simple tool usage logging hook"
 chmod +x "$CLAUDE_HOME/hooks/tool-usage.sh" 2>/dev/null || true
 
 # Simple user prompt logging hook (no analytics)
-PROMPT_LOGGER_HOOK='#!/bin/bash
+PROMPT_LOGGER_HOOK=$(cat <<'EOF'
+#!/bin/bash
 # Simple prompt logging based on official documentation
 # No categorization or analytics
 
@@ -396,40 +409,46 @@ PROMPT=$(echo "$INPUT" | jq -r ".prompt // empty")
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
 # Create log directory if it does not exist
-LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
+LOG_DIR="$HOME/.claude/logs"
 mkdir -p "$LOG_DIR"
 
 # Simple prompt logging as shown in docs
 echo "Processing prompt: $PROMPT" >> "$LOG_DIR/audit.log"
 
 # Always exit 0 to continue processing
-exit 0'
+exit 0
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/hooks/prompt-logger.sh" "$PROMPT_LOGGER_HOOK" "simple prompt logger hook"
 chmod +x "$CLAUDE_HOME/hooks/prompt-logger.sh" 2>/dev/null || true
 
 # Session cleanup hook (no metrics)
-SESSION_CLEANUP_HOOK='#!/bin/bash
+SESSION_CLEANUP_HOOK=$(cat <<'EOF'
+#!/bin/bash
 # Session cleanup hook - cleans up old files
 # Based on official documentation patterns
 
 set -euo pipefail
 
 # Cleanup temporary files older than 3 days
-find "'"$HOME_ABSOLUTE"'/.claude/backups" -name "*.backup" -mtime +3 -delete 2>/dev/null || true
+find "$HOME/.claude/backups" -name "*.backup" -mtime +3 -delete 2>/dev/null || true
 
 # Archive old logs (older than 30 days)
-LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
+LOG_DIR="$HOME/.claude/logs"
 find "$LOG_DIR" -name "*.log" -mtime +30 -exec gzip {} \; 2>/dev/null || true
 
 # Always exit 0
-exit 0'
+exit 0
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/hooks/session-cleanup.sh" "$SESSION_CLEANUP_HOOK" "session cleanup hook"
 chmod +x "$CLAUDE_HOME/hooks/session-cleanup.sh" 2>/dev/null || true
 
 # SubagentStop hook (no metrics)
-SUBAGENT_STOP_HOOK='#!/bin/bash
+SUBAGENT_STOP_HOOK=$(cat <<'EOF'
+#!/bin/bash
 # SubagentStop hook - tracks when autonomous agents complete their tasks
 # Based on official Claude Code documentation - no metrics
 
@@ -443,7 +462,7 @@ COMPLETION_STATUS=$(echo "$INPUT" | jq -r ".status // \"completed\"")
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
 # Log directory
-LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
+LOG_DIR="$HOME/.claude/logs"
 mkdir -p "$LOG_DIR"
 
 # Simple agent completion logging
@@ -457,13 +476,16 @@ if [[ -d "$AGENT_TEMP_DIR" ]]; then
 fi
 
 # Always exit 0 to continue processing
-exit 0'
+exit 0
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/hooks/subagent-stop.sh" "$SUBAGENT_STOP_HOOK" "subagent stop hook"
 chmod +x "$CLAUDE_HOME/hooks/subagent-stop.sh" 2>/dev/null || true
 
 # Enhanced notification hook with more options
-NOTIFY_HOOK='#!/bin/bash
+NOTIFY_HOOK=$(cat <<'EOF'
+#!/bin/bash
 # Enhanced cross-platform notification system
 # Based on official documentation patterns
 
@@ -543,13 +565,16 @@ send_notification() {
 send_notification "$MESSAGE" "$TYPE" "$TITLE"
 
 # Always exit 0
-exit 0'
+exit 0
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/hooks/notify.sh" "$NOTIFY_HOOK" "enhanced notification hook"
 chmod +x "$CLAUDE_HOME/hooks/notify.sh" 2>/dev/null || true
 
 # PreCompact hook (no metrics)
-PRECOMPACT_HOOK='#!/bin/bash
+PRECOMPACT_HOOK=$(cat <<'EOF'
+#!/bin/bash
 # PreCompact hook - prepares for session data compaction
 # Based on official Claude Code documentation - no metrics
 
@@ -562,7 +587,7 @@ SESSION_SIZE=$(echo "$INPUT" | jq -r ".session.size // 0")
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
 # Log directory
-LOG_DIR="'"$HOME_ABSOLUTE"'/.claude/logs"
+LOG_DIR="$HOME/.claude/logs"
 mkdir -p "$LOG_DIR"
 
 # Log compaction event
@@ -570,7 +595,7 @@ COMPACT_LOG="$LOG_DIR/compaction.log"
 echo "[$TIMESTAMP] PreCompact: Session $SESSION_ID (size: $SESSION_SIZE bytes)" >> "$COMPACT_LOG"
 
 # Create backup of current session state
-BACKUP_DIR="'"$HOME_ABSOLUTE"'/.claude/backups/sessions"
+BACKUP_DIR="$HOME/.claude/backups/sessions"
 mkdir -p "$BACKUP_DIR"
 
 # Archive important session data before compaction
@@ -587,13 +612,16 @@ if [[ $SESSION_SIZE -gt 1048576 ]]; then  # 1MB
 fi
 
 # Always exit 0 to allow compaction to proceed
-exit 0'
+exit 0
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/hooks/pre-compact.sh" "$PRECOMPACT_HOOK" "pre-compact hook"
 chmod +x "$CLAUDE_HOME/hooks/pre-compact.sh" 2>/dev/null || true
 
 # API Key Helper Script
-API_KEY_HELPER='#!/bin/bash
+API_KEY_HELPER=$(cat <<'EOF'
+#!/bin/bash
 # Enhanced API Key Helper - Generate or retrieve Anthropic API key
 # Based on official documentation patterns
 
@@ -663,7 +691,9 @@ echo "No Anthropic API key found. Please set ANTHROPIC_API_KEY environment varia
 echo "1. Create file: ~/.anthropic/api_key" >&2
 echo "2. Get key from: https://console.anthropic.com/settings/keys" >&2
 echo "3. Or store in your password manager" >&2
-exit 1'
+exit 1
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/scripts/get-api-key.sh" "$API_KEY_HELPER" "enhanced API key helper script"
 chmod +x "$CLAUDE_HOME/scripts/get-api-key.sh" 2>/dev/null || true
@@ -1733,9 +1763,9 @@ Project-specific patterns and conventions are maintained in:
 - `CLAUDE.md` - Project root configuration
 
 ### Imports
-@'"$HOME_ABSOLUTE"'/.claude/workflows/development-patterns.md
-@'"$HOME_ABSOLUTE"'/.claude/workflows/debugging-strategies.md
-@'"$HOME_ABSOLUTE"'/.claude/templates/code-templates.md
+@$HOME/.claude/workflows/development-patterns.md
+@$HOME/.claude/workflows/debugging-strategies.md
+@$HOME/.claude/templates/code-templates.md
 
 ## Performance Optimizations
 
@@ -2207,7 +2237,8 @@ handle_file_conflict "$CLAUDE_HOME/ide-integration/shortcuts.md" "$SHORTCUTS_REF
 # Step 8: Create terminal setup helper (same as original)
 echo -e "\n${YELLOW}Step 8: Creating enhanced terminal setup script...${NC}"
 
-TERMINAL_SETUP='#!/bin/bash
+TERMINAL_SETUP=$(cat <<'EOF'
+#!/bin/bash
 # Enhanced Terminal Setup for Claude Code
 # Based on official documentation
 
@@ -2243,7 +2274,7 @@ case "$TERM_NAME" in
     "VS Code Terminal")
         echo "For Shift+Enter support in VS Code:"
         echo "1. Open VS Code Settings (Cmd+, or Ctrl+,)"
-        echo "2. Search for '\''terminal.integrated.commandsToSkipShell'\''"
+        echo "2. Search for 'terminal.integrated.commandsToSkipShell'"
         echo "3. Add: \"workbench.action.quickOpen\""
         echo ""
         echo "For better color support:"
@@ -2260,9 +2291,9 @@ case "$TERM_NAME" in
             echo "✓ Shift+Enter configured for iTerm2"
             echo ""
             echo "Additional iTerm2 optimizations:"
-            echo "1. Enable: Preferences → Profiles → Terminal → '\''Silence bell'\''"
-            echo "2. Enable: Preferences → Profiles → Terminal → '\''Send escape sequence generated alerts'\''"
-            echo "3. Set: Preferences → Profiles → Keys → Left/Right Option → '\''Esc+'\''"
+            echo "1. Enable: Preferences → Profiles → Terminal → 'Silence bell'"
+            echo "2. Enable: Preferences → Profiles → Terminal → 'Send escape sequence generated alerts'"
+            echo "3. Set: Preferences → Profiles → Keys → Left/Right Option → 'Esc+'"
         else
             echo "iTerm2 is not running. Please:"
             echo "1. Open iTerm2"
@@ -2277,10 +2308,10 @@ case "$TERM_NAME" in
     "macOS Terminal")
         echo "For Option+Enter support in Terminal.app:"
         echo "1. Open Terminal → Settings → Profiles → Keyboard"
-        echo "2. Check '\''Use Option as Meta key'\''"
+        echo "2. Check 'Use Option as Meta key'"
         echo ""
         echo "For better colors:"
-        echo "Use a theme like '\''Pro'\'' or '\''Homebrew'\''"
+        echo "Use a theme like 'Pro' or 'Homebrew'"
         ;;
         
     "GNOME Terminal")
@@ -2341,10 +2372,12 @@ echo ""
 
 # Test notification system
 echo "Testing notification system..."
-"'"$HOME"'/.claude/hooks/notify.sh" <<< '\''{"message": "Terminal setup complete!", "type": "success", "title": "Claude Code"}'\''
+~/.claude/hooks/notify.sh <<< '{"message": "Terminal setup complete!", "type": "success", "title": "Claude Code"}'
 
 echo ""
-echo "Setup complete! Start Claude Code with: claude"'
+echo "Setup complete! Start Claude Code with: claude"
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/terminal-setup.sh" "$TERMINAL_SETUP" "enhanced terminal setup script"
 chmod +x "$CLAUDE_HOME/terminal-setup.sh" 2>/dev/null || true
@@ -2352,18 +2385,19 @@ chmod +x "$CLAUDE_HOME/terminal-setup.sh" 2>/dev/null || true
 # Step 9: Create verification script (updated to reflect no analytics)
 echo -e "\n${YELLOW}Step 9: Creating comprehensive verification script...${NC}"
 
-VERIFY_SCRIPT='#!/bin/bash
+VERIFY_SCRIPT=$(cat <<'EOF'
+#!/bin/bash
 # Verify Claude Expert No Analytics Setup
 
 echo "🔍 Claude Expert No Analytics Setup Verification"
 echo "==============================================="
 
 # Colors
-GREEN='\''\\033[0;32m'\''
-RED='\''\\033[0;31m'\''
-YELLOW='\''\\033[1;33m'\''
-BLUE='\''\\033[0;34m'\''
-NC='\''\\033[0m'\''
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
 
 errors=0
 warnings=0
@@ -2509,7 +2543,7 @@ done
 # Check MCP servers configuration
 echo -e "\n${YELLOW}Checking MCP configuration...${NC}"
 if [[ -f "$HOME/.claude/mcp.json" ]]; then
-    server_count=$(jq -r '\''.servers | length'\'' "$HOME/.claude/mcp.json" 2>/dev/null || echo 0)
+    server_count=$(jq -r '.servers | length' "$HOME/.claude/mcp.json" 2>/dev/null || echo 0)
     if [[ $server_count -ge 5 ]]; then
         echo -e "  ${GREEN}✓${NC} $server_count MCP servers configured"
         ((features++))
@@ -2544,13 +2578,15 @@ else
 fi
 
 echo -e "\n${YELLOW}Quick Start Commands:${NC}"
-echo "1. Run '\''claude'\'' to start Claude Code"
-echo "2. Use '\''claude mcp list'\'' to see configured MCP servers"
-echo "3. Try '\''/<tab>'\'' in Claude to see all slash commands"
-echo "4. Run '\''~/.claude/terminal-setup.sh'\'' for terminal config"
-echo "5. Check '\''~/.claude/ide-integration/'\'' for IDE setup guides"
+echo "1. Run 'claude' to start Claude Code"
+echo "2. Use 'claude mcp list' to see configured MCP servers"
+echo "3. Try '/<tab>' in Claude to see all slash commands"
+echo "4. Run '~/.claude/terminal-setup.sh' for terminal config"
+echo "5. Check '~/.claude/ide-integration/' for IDE setup guides"
 echo ""
-echo "All features enabled except analytics/metrics!"'
+echo "All features enabled except analytics/metrics!"
+EOF
+)
 
 handle_file_conflict "$CLAUDE_HOME/verify.sh" "$VERIFY_SCRIPT" "comprehensive verification script"
 chmod +x "$CLAUDE_HOME/verify.sh" 2>/dev/null || true
@@ -2598,7 +2634,7 @@ QUICK_REFERENCE='# Claude Code Expert - Quick Reference (No Analytics Edition)
 - Backups: `~/.claude/backups/`
 - Memory: `~/.claude/CLAUDE.md`
 
-## What'\''s Different
+## What's Different
 This setup includes ALL features from the official docs EXCEPT:
 - ❌ No performance metrics tracking
 - ❌ No tool usage statistics
