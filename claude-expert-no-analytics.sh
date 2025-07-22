@@ -1225,8 +1225,8 @@ Systematic debugging approach:
 
 handle_file_conflict "$CLAUDE_HOME/commands/debug.md" "$DEBUG_CMD" "advanced debugging command"
 
-# Code review command
-REVIEW_CMD='---
+# Code review command (renamed to avoid conflict with built-in /review)
+CODE_REVIEW_CMD='---
 description: "Comprehensive code review"
 tools: ["Read", "Grep", "Glob"]
 ---
@@ -1293,7 +1293,7 @@ Nice to have
 Improvement recommendations
 </output_format>'
 
-handle_file_conflict "$CLAUDE_HOME/commands/review.md" "$REVIEW_CMD" "comprehensive review command"
+handle_file_conflict "$CLAUDE_HOME/commands/code-review.md" "$CODE_REVIEW_CMD" "comprehensive code review command"
 
 # Refactoring command
 REFACTOR_CMD='---
@@ -1453,10 +1453,11 @@ SETTINGS_JSON=$(cat <<EOF
     ],
     "deny": [],
     "additionalDirectories": [
-      "../docs/",
-      "../shared/",
-      "~/workspace/",
-      "~/projects/"
+      "~/.dotfiles",
+      "~/Workspace/Cursorts",
+      "~/Workspace/Cursorts/Clawed",
+      "~/Workspace/Cursorts/CutoverSmokeTest",
+      "~/Workspace/awaytravel-theme"
     ]
   },
   "env": {
@@ -1468,10 +1469,10 @@ SETTINGS_JSON=$(cat <<EOF
   },
   "apiKeyHelper": "$HOME_ABSOLUTE/.claude/scripts/get-api-key.sh",
   "cleanupPeriodDays": 30,
-  "includeCoAuthoredBy": true,
+  "includeCoAuthoredBy": false,
   "autoUpdates": true,
   "preferredNotifChannel": "system",
-  "model": "claude-3-7-sonnet-20250219"
+  "model": "claude-opus-4-20250514"
 }
 EOF
 )
@@ -1657,7 +1658,7 @@ This is my comprehensive Claude Code configuration based on the complete officia
 
 ##### Advanced
 - `/debug` - Advanced debugging assistance
-- `/review` - Comprehensive code review
+- `/code-review` - Comprehensive code review
 - `/refactor` - Guided code refactoring
 
 ### MCP Integrations
@@ -2572,7 +2573,7 @@ QUICK_REFERENCE='# Claude Code Expert - Quick Reference (No Analytics Edition)
 - `/performance` - Performance analysis
 - `/security-audit` - Security review
 - `/debug` - Advanced debugging
-- `/review` - Code review
+- `/code-review` - Code review
 - `/refactor` - Guided refactoring
 - `/pr` - Prepare pull requests
 

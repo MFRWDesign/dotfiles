@@ -12,37 +12,38 @@
     - Read lines 1-2599 using Read tool (full file) -- Think very hard, think harder, about what the system state will look like after running these commands, fully following all logic and arriving at the correct hypotheitical run result.
   2. Once you are done reading the script and thinking about it fully, second, read /Users/thomas.sample/.dotfiles/claude-code-docs/COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md (2898 lines) in 2 chunks:
     - Read lines 1-2898 using Read tool (full file)
-  3. Third, read /Users/thomas.sample/.dotfiles/claude-code-docs/COMPLETE_PROMPT_ENGINEERING_DOCS.md (4407 lines) in 2 chunks:
-    - Read lines 1-2000 using Read tool (first chunk)
-    - Read lines 2001-4407 using Read tool with offset=2000, limit=2407 (remainder)
 
   Primary Reference Documentation:
   - /Users/thomas.sample/.dotfiles/claude-code-docs/COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md (2898 lines) - Official Claude Code documentation
-  - /Users/thomas.sample/.dotfiles/claude-code-docs/COMPLETE_PROMPT_ENGINEERING_DOCS.md (4407 lines) - Prompt engineering best practices
 
-  Verification Tasks: Perform only the first of these, then created a detailed record of where we are leaving off for the next time we work on this. This record should include a full reference of what we found in the first item that we're working on. This should take the form of a new file you create in markdown.
+  Verification Tasks: Perform only the sixth of these tasks (the Documentation Cross-Reference); do not perform any of the other tasks in this list, then created a detailed record of where we are leaving off for the next time we work on this. This record should include a full reference of what we found in the item that we were just working on. This should take the form of a new file you create in markdown with the suffix "-claude-code-docs-ref.md" Before creating this file, you also need to read the following 5 files that were created in steps 1-5: 
+  /Users/thomas.sample/.dotfiles/hook-coverage-verification-claude-code-docs-ref.md
+  /Users/thomas.sample/.dotfiles/mcp-server-configuration-claude-code-docs-ref.md
+  /Users/thomas.sample/.dotfiles/settings-json-compliance-claude-code-docs-ref.md
+  /Users/thomas.sample/.dotfiles/slash-commands-completeness-check-claude-code-docs-ref.md
+  /Users/thomas.sample/.dotfiles/system-wide-feature-implementation-checklist-claude-code-docs-ref.md
 
   1. Hook Coverage Verification
-  - Verify ALL hook types documented in COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md and COMPLETE_PROMPT_ENGINEERING_DOCS.md are implemented for system-wide use.
+  - Verify ALL hook types documented in COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md are implemented for system-wide use.
   - Confirm hooks cover ALL file modification tools mentioned in docs.
   - Check that security hooks return proper JSON responses as specified in documentation
   - Verify any additional hook types or patterns mentioned in the official docs
 
   2. Slash Commands Completeness
-  - Compare all slash commands in the enhanced script against examples in COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md and COMPLETE_PROMPT_ENGINEERING_DOCS.md
+  - Compare all slash commands in the enhanced script against examples in COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md
   - Verify command metadata format matches documentation (description, tools, argument-hint)
   - Ensure all common workflows and use cases from docs have corresponding commands
   - Check for any slash commands mentioned in docs but missing from the script
   - Note: Project-specific slash commands would be added per-project, not in this system-wide setup
 
   3. MCP Server Configuration
-  - Verify all MCP servers documented in COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md and COMPLETE_PROMPT_ENGINEERING_DOCS.md are included as examples/templates
+  - Verify all MCP servers documented in COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md are included as examples/templates
   - Check that server configurations match the official documentation examples
   - Confirm environment variable patterns follow documented conventions
   - Validate transport types and command specifications
 
   4. Settings.json Compliance
-  - Ensure all settings fields from COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md and COMPLETE_PROMPT_ENGINEERING_DOCS.md are present in the system-wide configuration
+  - Ensure all settings fields from COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md are present in the system-wide configuration
   - Verify permission arrays include all tools mentioned in documentation
   - Check hook configuration structure matches documented format
   - Confirm all optional settings are included with appropriate defaults
@@ -58,15 +59,10 @@
   - All tool-specific features implemented at system level
 
   6. Documentation Cross-Reference
-  - Check that every system-wide feature mentioned in COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md and/or COMPLETE_PROMPT_ENGINEERING_DOCS.md has a corresponding implementation
+  - Check that every system-wide feature mentioned in COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md has a corresponding implementation
   - Verify no features are added that aren't documented in the official docs
   - Ensure file paths and directory structures match documentation (using ~/.claude/ as the base)
   - Validate that all code examples and patterns follow documented conventions
-
-  7. Prompt Engineering Integration
-  - Check if any patterns from COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS or COMPLETE_PROMPT_ENGINEERING_DOCS.md should be incorporated into system-wide templates
-  - Verify slash command prompts follow best practices from prompt engineering docs
-  - Ensure system-wide CLAUDE.md content aligns with prompt engineering guidelines
 
   **Please provide a detailed analysis identifying:
   1. Any system-wide features from the official docs NOT implemented in the enhanced script

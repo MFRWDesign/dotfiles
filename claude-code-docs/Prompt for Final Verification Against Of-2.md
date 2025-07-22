@@ -20,7 +20,7 @@
   - /Users/thomas.sample/.dotfiles/claude-code-docs/COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md (2898 lines) - Official Claude Code documentation
   - /Users/thomas.sample/.dotfiles/claude-code-docs/COMPLETE_PROMPT_ENGINEERING_DOCS.md (4407 lines) - Prompt engineering best practices
 
-  Verification Tasks: Perform only the first of these, then created a detailed record of where we are leaving off for the next time we work on this. This record should include a full reference of what we found in the first item that we're working on. This should take the form of a new file you create in markdown.
+  Verification Tasks: This first task is already done. Read its file in full here to get all the pertinent information.: /Users/thomas.sample/.dotfiles/claude-code-docs/Hook_Coverage_Verification_Record.md Perform only the second of these, then created a detailed record of where we are leaving off for the next time we work on this. This record should include a full reference of what we found in the second item that we're working on. This should take the form of a new file you create in markdown.
 
   1. Hook Coverage Verification
   - Verify ALL hook types documented in COMPLETE_CLAUDE_CODE_OFFICIAL_DOCS.md and COMPLETE_PROMPT_ENGINEERING_DOCS.md are implemented for system-wide use.
