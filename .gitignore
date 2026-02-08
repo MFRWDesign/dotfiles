@@ -1,0 +1,11 @@
+# Version manager runtime files (shims, versions, caches)
+# These are machine-local and should not be tracked
+dot/nodenv/shims/
+dot/nodenv/versions/
+dot/nodenv/plugins/
+dot/pyenv/shims/
+dot/pyenv/versions/
+dot/pyenv/cache/
+dot/rbenv/shims/
+dot/rbenv/versions/
+dot/rbenv/sources/
