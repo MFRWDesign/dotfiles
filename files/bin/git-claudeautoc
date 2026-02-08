@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# Check if claude is available
+if ! command -v claude &> /dev/null; then
+    echo "Error: 'claude' command not found. Please install Claude CLI." >&2
+    exit 1
+fi
+
+# Check if in a git repository
+if ! git rev-parse --git-dir &> /dev/null; then
+    echo "Error: Not in a git repository" >&2
+    exit 1
+fi
+
+# Check if there are staged changes
+if [ -z "$(git diff --cached --name-only)" ]; then
+    printf "No staged changes found. Stage all and inspect? [Y/n]: "
+    read answer
+    if [ -z "$answer" ] || [ "$answer" = "Y" ] || [ "$answer" = "y" ]; then
+        git add . && git status
+        # Re-check that we now have staged changes, then fall through
+        if [ -z "$(git diff --cached --name-only)" ]; then
+            echo "No changes to commit."
+            exit 0
+        fi
+    else
+        exit 0
+    fi
+fi
+
+# At this point we have staged changes -- generate commit message
+
+# Check for empty diff
+if [ -z "$(git diff --cached)" ]; then
+    echo "Warning: No actual changes in staged files (files may be unchanged)" >&2
+    exit 0
+fi
+
+# Generate commit message using Claude
+PROMPT=$(cat ~/.dotfiles/files/git/commit-prompt.txt)
+
+echo "Generating commit message with Claude..."
+echo "Analyzing staged changes and creating conventional commit message..."
+COMMIT_MSG=$(git diff --cached | claude --print "$PROMPT Here are the staged changes:" 2>&1)
+
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to generate commit message with Claude" >&2
+    echo "Claude output: $COMMIT_MSG" >&2
+    exit 1
+fi
+
+# Preview the commit message
+echo -e "\n📝 Generated commit message:"
+echo "----------------------------------------"
+echo "$COMMIT_MSG"
+echo "----------------------------------------"
+
+printf "\nProceed with this commit? [Y/n/e]: "
+read confirm
+
+if [ "$confirm" = "e" ] || [ "$confirm" = "E" ]; then
+    # Edit the commit message
+    git commit -e -m "$COMMIT_MSG"
+elif [ -z "$confirm" ] || [ "$confirm" = "Y" ] || [ "$confirm" = "y" ]; then
+    # Use the message as-is
+    git commit -m "$COMMIT_MSG"
+else
+    echo "Commit cancelled."
+    exit 0
+fi
