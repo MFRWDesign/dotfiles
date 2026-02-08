@@ -5,6 +5,11 @@
 #   Sorin Ionescu <sorin.ionescu@gmail.com>
 #
 
+mcd () {
+  mkdir "$1"
+  cd "$1"
+}
+
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
@@ -17,3 +22,72 @@ for f in ~/.zsh/*; do source $f; done
 
 # Add ~/bin to PATH
 export PATH="$HOME/bin:$PATH"
+
+if which jenv > /dev/null; then eval "$(jenv init -)"; fi
+
+# Add alias command
+# Example usage:
+# add-alias ALIAS_NAME "ALIAS_COMMANDS"
+# add-alias beru "bundle exec rackup"
+add-alias() {
+  echo 'alias' $1=\"$2\" >> ~/.zshrc
+  source ~/.zshrc
+}
+
+# Add cd alias command
+# Example usage:
+# add-cd-alias PROJECT_NAME PROJECT_DIR
+# add-cd-alias sb solidusbook
+add-cd-alias() {
+  echo 'alias' cd$1=\"cd ~/Workspace/$2\" >> ~/.zshrc
+  source ~/.zshrc
+}
+
+# Add cd alias command
+# Example usage:
+# add-cd-alias PROJECT_NAME PROJECT_DIR
+# add-cd-alias sb solidusbook
+add-workspace-alias() {
+  echo 'alias' cd$1=\"cd ~/Workspace/$1\" >> ~/.zshrc
+  source ~/.zshrc
+}
+
+alias awsa=add-workspace-alias
+
+# Add mcd command
+# Example usage:
+# mcd FOLDER_NAME
+# mcd GirlTalk
+# mcd () {
+#   mkdir "$1"
+#   cd "$1"
+# }
+
+# alias mcd="mkdir $1 && cd !$"
+
+alias -g G="| grep"
+
+alias cdmbc="cd ~/Workspace/mbc"
+alias cdkww="cd ~/Workspace/kww"
+alias cdgmvp="cd /Users/thomas/Workspace/gmvp"
+alias beru="bundle exec rackup"
+alias cdao="cd /Users/thomas/Workspace/aomvp"
+alias cdsb="cd /Users/thomas/Workspace/solidusbook"
+alias cdllb="cd /Users/thomas/Workspace/llb"
+alias cdchezmike="cd /Users/thomas/Workspace/chezmike"
+alias cdmbc-image-matcher="cd /Users/thomas/Workspace/mbc-image-matcher"
+alias ebayx="bundle exec ruby mbc.rb ebay"
+alias cdsolidusbook="cd /Users/thomas/Workspace/"
+alias cdsolidusbook="cd /Users/thomas/Workspace/solidusbook"
+alias diffl="git diff @~..@"
+alias diffc="git diff --cached"
+alias diff="git diff"
+alias cdsolidus_recently_viewed="cd /Users/thomas/Workspace/solidus_recently_viewed"
+alias cdrevive="cd /Users/thomas/Workspace/revive"
+alias cdrevive="cd /Users/thomas/Workspace/revive"
+alias gilad="git log -n"
+alias cdsolidus="cd /Users/thomas/Workspace/solidus"
+alias cdRSF-Skywalker="cd /Users/thomas/Workspace/RSF-Skywalker"
+alias cdmbc-tgm="cd /Users/thomas/Workspace/mbc-tgm"
+alias cdkarma-creative="cd /Users/thomas/Workspace/karma-creative"
+export PATH="/usr/local/opt/mysql@5.7/bin:$PATH"

@@ -7,6 +7,9 @@
 	gst = git status
   pub = !git push -u origin $(git branch-name)
   password = !reset-github-password
+	redo = commit --amend --no-edit
+	lc = rev-parse --short HEAD
+	ll = log --pretty=format:"%C(yellow)%h%Cred%d\\ %Creset%s%Cblue\\ [%cn]" --decorate --numstat
 [credential]
 	helper = osxkeychain
 [color]
@@ -20,11 +23,15 @@
 	smudge = git lfs smudge %f
 	required = true
 [github]
-	user = mfrwdesign
+	user = MFRWDesign
 [push]
 	default = simple
 [rerere]
 	enabled = true
 [user]
-  email = thomas@mfrwdesign.com
-  name = Thomas Sample
+	email = thomas@mfrwdesign.com
+	name = Thomas Sample
+[pull]
+	ff = only
+[init]
+	defaultBranch = main
