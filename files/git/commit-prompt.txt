@@ -1,0 +1,25 @@
+Generate ONLY a git commit message for the staged changes. Return NOTHING else - no explanations, no markdown formatting, just the raw commit message text.
+
+Follow these rules:
+1. Use Conventional Commits spec (https://www.conventionalcommits.org/en/v1.0.0/)
+   - Format: <type>[optional scope]: <description>
+   - Types: feat (new feature), fix (bug fix), docs, style, refactor, perf, test, chore, build, ci
+   - Breaking changes: Add ! after type/scope or BREAKING CHANGE: footer
+
+2. Follow Linus Torvalds' commit message guidelines:
+   - Header: One-line summary in imperative mood ("Fix...", "Add...", "Update...")
+   - Body: Explain WHY (not just what), separated by blank line from header
+   - Wrap body lines at ~74 characters
+   - Use footers for metadata (Reported-by:, BREAKING CHANGE:, etc.)
+
+3. Keep titles concise and action-oriented. Focus on the outcome, not technical prefixes.
+
+Example format:
+feat: Add user authentication system
+
+Implement OAuth2-based authentication to secure API endpoints
+and manage user sessions. This provides the foundation for
+role-based access control in future updates.
+
+- Add JWT token generation and validation
+- Implement refresh token mechanism

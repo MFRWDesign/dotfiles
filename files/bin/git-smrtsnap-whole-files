@@ -1,0 +1,352 @@
+#!/bin/bash
+
+# git-smrtsnap-whole-files: Automatically create multiple logical snapshot commits from all changes
+# This is a simplified version that stages whole files only (no partial file commits)
+
+# Check for help flag
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    echo "git-smrtsnap-whole-files - Automatically organize and commit changes"
+    echo ""
+    echo "Usage: git-smrtsnap-whole-files"
+    echo ""
+    echo "This command analyzes all uncommitted changes and creates multiple"
+    echo "logical commits, grouping whole files that belong together."
+    echo ""
+    echo "Unlike git-smrtsnap-auto, this version:"
+    echo "  - Only stages complete files (no partial file commits)"
+    echo "  - Simpler and more reliable operation"
+    echo "  - Faster execution with less complexity"
+    echo ""
+    echo "The command will:"
+    echo "  1. Analyze all changes using Claude"
+    echo "  2. Group files into logical commits"
+    echo "  3. Show you the plan and ask for confirmation"
+    echo "  4. Create snapshot commits for each group"
+    echo "  5. Repeat until all changes are committed"
+    exit 0
+fi
+
+# Start total timer
+TOTAL_START=$(date +%s)
+
+# Check if claude is available
+if ! command -v claude &> /dev/null; then
+    echo "Error: 'claude' command not found. Please install Claude CLI." >&2
+    exit 1
+fi
+
+# Check if in a git repository
+if ! git rev-parse --git-dir &> /dev/null; then
+    echo "Error: Not in a git repository" >&2
+    exit 1
+fi
+
+# Check if git-snapshotc is available
+if ! command -v git-snapshotc &> /dev/null; then
+    echo "Error: 'git-snapshotc' command not found in PATH" >&2
+    echo "Make sure files/bin is in your PATH" >&2
+    exit 1
+fi
+
+# Function to check if there are any changes
+has_changes() {
+    [ -n "$(git status --porcelain)" ]
+}
+
+# Set up cleanup with portable mktemp
+TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/git-smrtsnap-whole-files.XXXXXX") || {
+    echo "Error: Failed to create temporary directory" >&2
+    exit 1
+}
+chmod 700 "$TEMP_DIR"
+trap 'rm -rf "$TEMP_DIR" 2>/dev/null' EXIT INT TERM
+
+# Track planning history for context
+PLANNING_HISTORY="$TEMP_DIR/planning-history.txt"
+> "$PLANNING_HISTORY"
+
+# Check initial state
+INITIAL_STATUS=$(git status --porcelain)
+if [ -z "$INITIAL_STATUS" ]; then
+    echo "No changes to commit."
+    exit 0
+fi
+
+# Check if there are already staged changes
+if [ -n "$(git diff --cached --name-only)" ]; then
+    echo "⚠️  Found staged changes. Creating commit for those first..."
+    if ! git-snapshotc; then
+        echo "Error: Failed to commit staged changes" >&2
+        exit 1
+    fi
+    echo ""
+    # Re-check status after committing staged changes
+    INITIAL_STATUS=$(git status --porcelain)
+    if [ -z "$INITIAL_STATUS" ]; then
+        echo "No more changes to commit after staged commit."
+        exit 0
+    fi
+fi
+
+echo "📊 Found changes in $(echo "$INITIAL_STATUS" | wc -l | xargs) files/directories"
+
+# Main loop - continue until no changes remain
+ITERATION=0
+MAX_ITERATIONS=20
+while has_changes; do
+    ((ITERATION++))
+    
+    # Prevent infinite loops
+    if [ $ITERATION -gt $MAX_ITERATIONS ]; then
+        echo -e "\n❌ Error: Exceeded maximum iterations ($MAX_ITERATIONS)" >&2
+        echo "Aborting to prevent infinite loop." >&2
+        echo "Remaining changes can be committed manually." >&2
+        exit 1
+    fi
+    
+    echo -e "\n🔄 Iteration $ITERATION: Analyzing remaining changes..."
+    
+    # Get current status
+    STATUS_FILE="$TEMP_DIR/status-$ITERATION.txt"
+    git status --porcelain > "$STATUS_FILE"
+    
+    # Create analysis prompt
+    ANALYSIS_PROMPT='Analyze this git status output to identify the NEXT logical commit.
+Group whole files that belong together as one complete feature.
+
+Output format:
+===COMMIT_START===
+DESCRIPTION: Brief description (max 30 chars)
+REASONING: One line explaining why these files belong together
+FILES:
+file1.txt
+file2.py
+dir/file3.js
+===COMMIT_END===
+
+Rules:
+- Pick ONE COMPLETE FEATURE - include ALL files needed for it to work
+- If adding aliases/commands, include BOTH the config AND implementation files
+- Examples of complete features:
+  - Git aliases + their script implementations
+  - Config change + its supporting files
+  - Documentation files that stand alone
+- Group files that would be broken without each other
+- List ONLY the file paths, one per line, no quotes or extra formatting
+- Include files with any status (M, A, ??, D, etc.)
+
+Here is the current status:
+
+IMPORTANT CONTEXT - Previous iteration plans:'
+    
+    # Include planning history if not first iteration
+    if [ $ITERATION -gt 1 ] && [ -s "$PLANNING_HISTORY" ]; then
+        ANALYSIS_PROMPT="${ANALYSIS_PROMPT}
+$(cat "$PLANNING_HISTORY")
+
+Based on the above plans, identify the NEXT logical commit that hasn't been completed yet."
+    fi
+    
+    ANALYSIS_PROMPT="${ANALYSIS_PROMPT}
+
+Current remaining changes:
+$(cat "$STATUS_FILE")"
+
+    echo "Sending to Claude for analysis..."
+    
+    # Create response file
+    RESPONSE_FILE="$TEMP_DIR/response-$ITERATION.txt"
+    
+    # Start timer and run claude in background
+    START_TIME=$(date +%s)
+    echo "$ANALYSIS_PROMPT" | claude --print > "$RESPONSE_FILE" 2>&1 &
+    CLAUDE_PID=$!
+    
+    # Show elapsed time while waiting with timeout
+    echo -n "⏱️  Elapsed: "
+    TIMEOUT=250  # 250 seconds timeout
+    while kill -0 $CLAUDE_PID 2>/dev/null; do
+        CURRENT_TIME=$(date +%s)
+        ELAPSED=$((CURRENT_TIME - START_TIME))
+        printf "\r⏱️  Elapsed: %ds" $ELAPSED
+        
+        # Check for timeout
+        if [ $ELAPSED -gt $TIMEOUT ]; then
+            echo -e "\n⚠️  Timeout: Claude is taking too long (>${TIMEOUT}s). Killing process..." >&2
+            kill $CLAUDE_PID 2>/dev/null
+            wait $CLAUDE_PID
+            break
+        fi
+        
+        sleep 1
+    done
+    
+    # Wait for completion and clear the line
+    wait $CLAUDE_PID
+    CLAUDE_EXIT=$?
+    printf "\r⏱️  Completed in %ds\n" $(($(date +%s) - START_TIME))
+    
+    # Check if claude failed
+    if [ $CLAUDE_EXIT -ne 0 ]; then
+        echo "Error: Failed to get commit plan from Claude" >&2
+        if [ -s "$RESPONSE_FILE" ]; then
+            cat "$RESPONSE_FILE" >&2
+        fi
+        echo -e "\nFalling back to staging all changes..."
+        git add -A
+        git-snapshotc
+        exit 0
+    fi
+    
+    # Check if response is empty
+    if [ ! -s "$RESPONSE_FILE" ]; then
+        echo "Error: Claude returned empty response" >&2
+        echo -e "\nFalling back to staging all changes..."
+        git add -A
+        git-snapshotc
+        exit 0
+    fi
+    
+    # Save to planning history
+    echo "=== ITERATION $ITERATION PLAN ===" >> "$PLANNING_HISTORY"
+    echo "Timestamp: $(date)" >> "$PLANNING_HISTORY"
+    grep -E "^(DESCRIPTION:|REASONING:|FILES:|===)" "$RESPONSE_FILE" >> "$PLANNING_HISTORY" || true
+    echo "" >> "$PLANNING_HISTORY"
+    
+    # Parse the response
+    IN_COMMIT=false
+    IN_FILES=false
+    DESCRIPTION=""
+    REASONING=""
+    FILES_LIST="$TEMP_DIR/files-$ITERATION.txt"
+    > "$FILES_LIST"
+    
+    while IFS= read -r line; do
+        if [[ "$line" == "===COMMIT_START===" ]]; then
+            IN_COMMIT=true
+        elif [[ "$line" == "===COMMIT_END===" ]]; then
+            IN_COMMIT=false
+        elif [[ "$IN_COMMIT" == true ]]; then
+            if [[ "$line" =~ ^DESCRIPTION:\ (.+)$ ]]; then
+                DESCRIPTION="${BASH_REMATCH[1]}"
+            elif [[ "$line" =~ ^REASONING:\ (.+)$ ]]; then
+                REASONING="${BASH_REMATCH[1]}"
+            elif [[ "$line" == "FILES:" ]]; then
+                IN_FILES=true
+            elif [[ "$IN_FILES" == true ]] && [[ -n "$line" ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
+                # Trim whitespace and add to files list
+                echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' >> "$FILES_LIST"
+            fi
+        fi
+    done < "$RESPONSE_FILE"
+    
+    # Validate we have files
+    if [ -z "$DESCRIPTION" ] || [ ! -s "$FILES_LIST" ]; then
+        echo "Warning: Claude did not provide a valid commit plan" >&2
+        echo "Description: '$DESCRIPTION'" >&2
+        echo "Files found: $(wc -l < "$FILES_LIST")" >&2
+        
+        # Show Claude's response for debugging
+        if [ -s "$RESPONSE_FILE" ]; then
+            echo -e "\nClaude's response:" >&2
+            head -20 "$RESPONSE_FILE" | sed 's/^/  /' >&2
+        fi
+        
+        echo -e "\nFalling back to staging all changes..."
+        git add -A
+        git-snapshotc
+        exit 0
+    fi
+    
+    # Show the plan
+    echo -e "\n📋 Next commit:"
+    echo "Description: $DESCRIPTION"
+    echo "Reasoning: $REASONING"
+    echo -e "\nFiles to stage:"
+    cat "$FILES_LIST" | sed 's/^/  /'
+    
+    printf "\nProceed with this commit? [Y/n]: "
+    read answer
+    
+    if [ -z "$answer" ] || [ "$answer" = "Y" ] || [ "$answer" = "y" ]; then
+        echo -e "\n🔧 Staging files..."
+        
+        # Stage each file
+        while IFS= read -r file; do
+            if [ -n "$file" ]; then
+                # Check file status in git
+                FILE_STATUS=$(git status --porcelain "$file" 2>/dev/null | cut -c1-2)
+                
+                if [ -e "$file" ]; then
+                    # File exists, stage it
+                    echo "  Staging: $file"
+                    git add "$file"
+                elif [[ "$FILE_STATUS" =~ ^[D ][D ]$ ]] || [[ "$FILE_STATUS" == "D " ]]; then
+                    # File was deleted, stage the deletion
+                    echo "  Staging deletion: $file"
+                    git add "$file"
+                else
+                    echo "  Warning: File not found and not tracked: $file"
+                fi
+            fi
+        done < "$FILES_LIST"
+        
+        # Show what's staged
+        echo -e "\nStaged changes:"
+        git --no-pager diff --cached --name-status
+        
+        # Check if anything was actually staged
+        if [ -z "$(git diff --cached --name-only)" ]; then
+            echo -e "\n⚠️  Warning: No files were successfully staged"
+            echo "Skipping this commit group."
+            echo "OUTCOME: No files staged - $DESCRIPTION" >> "$PLANNING_HISTORY"
+            echo "" >> "$PLANNING_HISTORY"
+            continue
+        fi
+        
+        # Create the commit
+        echo -e "\nCreating snapshot commit..."
+        if git-snapshotc; then
+            # Record success
+            echo "OUTCOME: Committed - $DESCRIPTION" >> "$PLANNING_HISTORY"
+            echo "" >> "$PLANNING_HISTORY"
+        else
+            echo "Error: Failed to create commit" >&2
+            echo "OUTCOME: Failed to commit - $DESCRIPTION" >> "$PLANNING_HISTORY"
+            echo "" >> "$PLANNING_HISTORY"
+            exit 1
+        fi
+    else
+        echo "Aborted by user."
+        echo "OUTCOME: Skipped by user - $DESCRIPTION" >> "$PLANNING_HISTORY"
+        echo "" >> "$PLANNING_HISTORY"
+        exit 0
+    fi
+    
+    # Check if there are still changes
+    if ! has_changes; then
+        echo -e "\n✨ No more changes to commit!"
+        break
+    fi
+done
+
+echo -e "\n✅ All changes committed!"
+
+# Show total elapsed time
+TOTAL_END=$(date +%s)
+TOTAL_ELAPSED=$((TOTAL_END - TOTAL_START))
+TOTAL_MINS=$((TOTAL_ELAPSED / 60))
+TOTAL_SECS=$((TOTAL_ELAPSED % 60))
+
+if [ $TOTAL_MINS -gt 0 ]; then
+    echo -e "\n⏱️  Total time: ${TOTAL_MINS}m ${TOTAL_SECS}s"
+else
+    echo -e "\n⏱️  Total time: ${TOTAL_ELAPSED}s"
+fi
+
+# Show summary
+TOTAL_COMMITS=$(git rev-list --count HEAD@{1}..HEAD 2>/dev/null || echo "0")
+if [ "$TOTAL_COMMITS" -gt 0 ]; then
+    echo -e "\n📊 Summary: Created $TOTAL_COMMITS commits"
+    git --no-pager log --oneline HEAD@{1}..HEAD
+fi
