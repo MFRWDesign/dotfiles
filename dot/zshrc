@@ -1,3 +1,8 @@
+mcd () {
+  mkdir "$1"
+  cd "$1"
+}
+
 # Load zsh customizations
 for f in ~/.zsh/*; do source $f; done
 
