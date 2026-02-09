@@ -11,8 +11,13 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 fi
 
-# # Add ~/bin and homebrew to PATH
-export PATH="$HOME/bin:/opt/workbrew/bin:/opt/homebrew/sbin:/opt/homebrew/bin:$PATH"
+# Add ~/bin and Homebrew to PATH (covers both Intel and Apple Silicon)
+export PATH="$HOME/bin:/usr/local/bin:/usr/local/sbin:/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+
+# Workbrew (work machine only)
+if [ -d /opt/workbrew ]; then
+  export PATH="/opt/workbrew/bin:$PATH"
+fi
 
 # Add pipx bin directory to PATH (for fabric and other pipx-installed tools)
 export PATH="$PATH:$HOME/.local/bin"
@@ -27,4 +32,7 @@ if [ -f "$HOME/.zshrc.local" ]; then
   source "$HOME/.zshrc.local"
 fi
 
-eval "$(atuin init zsh)"
+# Atuin shell history (if installed)
+if command -v atuin &>/dev/null; then
+  eval "$(atuin init zsh)"
+fi

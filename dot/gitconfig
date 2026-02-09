@@ -31,22 +31,14 @@
 	user = MFRWDesign
 [commit]
 	gpgsign = false
-[pull]
-	rebase = false
 [init]
 	defaultBranch = main
 [merge]
-  ff = no
+	ff = no
 [pull]
-  ff = only
-[rerere]
-	enabled = true
+	ff = only
+	rebase = false
 [rebase]
 	autosquash = true
-[safe]
-	directory = /opt/homebrew
-	directory = /opt/homebrew/Library/Taps/homebrew/homebrew-aliases
-	directory = /opt/homebrew/Library/Taps/homebrew/homebrew-autoupdate
-	directory = /opt/homebrew/Library/Taps/homebrew/homebrew-bundle
-	directory = /opt/homebrew/Library/Taps/homebrew/homebrew-cask
-	directory = /opt/homebrew/Library/Taps/homebrew/homebrew-core
+[rerere]
+	enabled = true
