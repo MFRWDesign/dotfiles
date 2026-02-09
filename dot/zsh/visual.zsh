@@ -1,1 +1,1 @@
-export VISUAL="code"
+export VISUAL="cursor"

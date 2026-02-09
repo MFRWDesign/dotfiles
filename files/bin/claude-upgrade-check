@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# claude-upgrade-check
+#
+# Checks if a new Claude Code version is available via Homebrew and whether
+# it has been out long enough to be considered safe to upgrade. Designed to
+# avoid bleeding-edge bugs by enforcing a configurable delay after release.
+#
+# Usage: claude-upgrade-check [--delay DAYS] [--upgrade]
+#   --delay DAYS   Number of days to wait after release (default: 14)
+#   --upgrade      Actually run the upgrade if the delay threshold is met
+
+DELAY_DAYS=14
+DO_UPGRADE=false
+STATE_DIR="${HOME}/.config/claude-upgrade-check"
+STATE_FILE="${STATE_DIR}/state"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --delay)
+      DELAY_DAYS="$2"
+      shift 2
+      ;;
+    --upgrade)
+      DO_UPGRADE=true
+      shift
+      ;;
+    -h|--help)
+      echo "Usage: claude-upgrade-check [--delay DAYS] [--upgrade]"
+      echo ""
+      echo "Options:"
+      echo "  --delay DAYS   Days to wait after release before upgrading (default: 14)"
+      echo "  --upgrade      Run 'brew upgrade --cask claude-code' if safe"
+      echo "  -h, --help     Show this help message"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# --- Pre-flight checks ---
+
+if ! command -v brew &>/dev/null; then
+  echo "Error: Homebrew not found" >&2
+  exit 1
+fi
+
+if ! command -v python3 &>/dev/null; then
+  echo "Error: python3 not found" >&2
+  exit 1
+fi
+
+# --- Gather version info ---
+
+INSTALLED=$(brew list --cask --versions claude-code 2>/dev/null | awk '{print $NF}')
+if [ -z "$INSTALLED" ]; then
+  echo "Claude Code is not installed via Homebrew."
+  echo "Install with: brew install --cask claude-code"
+  exit 1
+fi
+
+LATEST=$(brew info --json=v2 --cask claude-code 2>/dev/null | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+print(data['casks'][0]['version'])
+" 2>/dev/null || true)
+
+if [ -z "$LATEST" ]; then
+  echo "Error: Could not determine latest Claude Code version" >&2
+  exit 1
+fi
+
+echo "Installed: $INSTALLED"
+echo "Available: $LATEST"
+
+# --- Up to date? ---
+
+if [ "$INSTALLED" = "$LATEST" ]; then
+  echo ""
+  echo "[OK] Claude Code is up to date."
+  exit 0
+fi
+
+echo ""
+echo "New version available: $LATEST (you have $INSTALLED)"
+
+# --- Determine release date ---
+
+mkdir -p "$STATE_DIR"
+RELEASE_DATE=""
+
+# Try GitHub releases API for the actual release date
+if command -v curl &>/dev/null; then
+  RELEASE_DATE=$(curl -sf "https://api.github.com/repos/anthropics/claude-code/releases" 2>/dev/null | python3 -c "
+import json, sys
+try:
+    releases = json.load(sys.stdin)
+    target = '$LATEST'
+    for r in releases:
+        tag = r.get('tag_name', '').lstrip('v')
+        name = r.get('name', '')
+        if tag == target or name.endswith(target):
+            print(r['published_at'][:10])
+            break
+except Exception:
+    pass
+" 2>/dev/null || true)
+fi
+
+if [ -n "$RELEASE_DATE" ]; then
+  echo "Release date: $RELEASE_DATE (from GitHub)"
+else
+  # Fallback: track when we first noticed this version locally
+  if [ -f "$STATE_FILE" ] && grep -q "^${LATEST}=" "$STATE_FILE" 2>/dev/null; then
+    RELEASE_DATE=$(grep "^${LATEST}=" "$STATE_FILE" | tail -1 | cut -d= -f2)
+  else
+    RELEASE_DATE=$(date +%Y-%m-%d)
+    echo "${LATEST}=${RELEASE_DATE}" >> "$STATE_FILE"
+    echo "(First time seeing v${LATEST} -- recording today as baseline)"
+  fi
+  echo "First seen: $RELEASE_DATE (local tracking)"
+fi
+
+# --- Calculate age and apply delay policy ---
+
+# macOS date -j vs GNU date
+if date -j -f "%Y-%m-%d" "$RELEASE_DATE" +%s &>/dev/null; then
+  RELEASE_EPOCH=$(date -j -f "%Y-%m-%d" "$RELEASE_DATE" +%s)
+else
+  RELEASE_EPOCH=$(date -d "$RELEASE_DATE" +%s)
+fi
+NOW_EPOCH=$(date +%s)
+DAYS_OLD=$(( (NOW_EPOCH - RELEASE_EPOCH) / 86400 ))
+
+echo "Age: $DAYS_OLD day(s)"
+echo "Policy: wait $DELAY_DAYS day(s) before upgrading"
+echo ""
+
+if [ "$DAYS_OLD" -ge "$DELAY_DAYS" ]; then
+  echo "[READY] Version $LATEST has been out for $DAYS_OLD days (threshold: ${DELAY_DAYS}d)."
+  echo "  Safe to upgrade."
+  echo ""
+  if [ "$DO_UPGRADE" = true ]; then
+    echo "Upgrading now..."
+    brew upgrade --cask claude-code
+  else
+    echo "  Run:  brew upgrade --cask claude-code"
+    echo "  Or:   claude-upgrade-check --upgrade"
+  fi
+else
+  DAYS_LEFT=$(( DELAY_DAYS - DAYS_OLD ))
+  echo "[WAIT] Version $LATEST is only $DAYS_OLD day(s) old."
+  echo "  Waiting $DAYS_LEFT more day(s) before recommending upgrade."
+fi
